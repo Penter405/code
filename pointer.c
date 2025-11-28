@@ -45,7 +45,9 @@ void output_chinese_character(){
     printf("%zu\n",sizeof(chinese_name));
     printf("%s\n",chinese_name);
 }
-int search(char what[]){
+int search(char* what){
+    int size;
+    
     switch what{
         
     }
