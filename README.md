@@ -19,12 +19,26 @@ git fetch --all
 CUR_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 echo "Current branch: $CUR_BRANCH"
 
+# 檢查本地是否有未 commit 改動
+if ! git diff-index --quiet HEAD --; then
+    echo "You have local changes that are not committed."
+    read -p "You have not saved your changes on local. Continue and lose your updates on local? (Y/n) " bot
+    if [[ "$bot" != "Y" && "$bot" != "y" ]]; then
+        echo "Canceling."
+        exit 1
+    else
+        echo "Discarding local changes..."
+        git reset --hard
+        git clean -fd
+    fi
+fi
+
 # 本地 commit 與遠端 commit
 LOCAL=$(git rev-parse HEAD)
 REMOTE=$(git rev-parse origin/$CUR_BRANCH)
 
 if [ "$LOCAL" != "$REMOTE" ]; then
-    echo "Commit not same!"
+    echo "Commit not same with remote!"
     read -p "Save local to GitHub and then switch? (Y/n) " bot
     if [[ "$bot" == "Y" || "$bot" == "y" ]]; then
         git push origin $CUR_BRANCH
@@ -35,20 +49,6 @@ if [ "$LOCAL" != "$REMOTE" ]; then
             echo "Canceling."
             exit 1
         fi
-    fi
-fi
-
-# 檢查本地是否有未 commit 改動
-if ! git diff-index --quiet HEAD --; then
-    echo "You have uncommitted changes."
-    read -p "Force discard local changes and switch branch? (Y/n) " force
-    if [[ "$force" != "Y" && "$force" != "y" ]]; then
-        echo "Canceling."
-        exit 1
-    else
-        echo "Discarding local changes..."
-        git reset --hard
-        git clean -fd
     fi
 fi
 
