@@ -1,15 +1,3 @@
-# code
-## a place i set up IDE for programming
-## use a code space always
-## chatgpt
-https://chatgpt.com/share/6928f630-f644-8013-88d1-686021a51411
-## 本地完全吃到雲端
-```
-git fetch origin
-git reset --hard origin/main
-```
-## 切換branch on code space
-```
 #!/bin/bash
 
 echo "Fetching remote branches..."
@@ -99,4 +87,3 @@ fi
 # 強制同步雲端版本
 git reset --hard origin/$NEW_BRANCH
 echo "Switched to branch '$NEW_BRANCH' and synced with GitHub."
-```
