@@ -31,13 +31,13 @@ echo "Current branch: $CUR_BRANCH"
 if ! git diff --quiet || ! git diff --cached --quiet || [ -n "$(git ls-files --others --exclude-standard)" ]; then
     echo "You have local changes that are not committed (including untracked files)."
     read -p "You have not saved your changes on local. Continue and lose your updates on local? (Y/n) " bot
-    if [[ "$bot" != "Y" && "$bot" != "y" ]]; then
-        echo "Canceling."
-        exit 1
-    else
+    if [[ "$bot" == "Y" ]]; then
         echo "Discarding local changes..."
         git reset --hard
         git clean -fd
+    else
+        echo "Canceling."
+        exit 1
     fi
 fi
 
@@ -46,14 +46,18 @@ LOCAL=$(git rev-parse HEAD)
 REMOTE=$(git rev-parse origin/$CUR_BRANCH)
 
 if [ "$LOCAL" != "$REMOTE" ]; then
-    echo "Commit not same with remote!"
-    read -p "Save local commits to GitHub and then switch? (Y/n) " bot
-    if [[ "$bot" == "Y" || "$bot" == "y" ]]; then
-        git push origin $CUR_BRANCH
-        echo "Local commits pushed to GitHub."
+    read -p "Commit not same with remote! Switch and lose your commits? (Y/n) " bot
+    if [[ "$bot" == "Y" ]]; then
+        git reset --hard origin/$CUR_BRANCH
+        echo "Local commits discarded, switched to remote version."
     else
-        read -p "Don't save, and switch branch anyway? (Y/n) " bot2
-        if [[ "$bot2" != "Y" && "$bot2" != "y" ]]; then
+        read -p "Save local commits to GitHub and then switch? (Y/n) " bot2
+        if [[ "$bot2" == "Y" ]]; then
+            git push origin $CUR_BRANCH
+            echo "Local commits pushed to GitHub."
+            git reset --hard origin/$CUR_BRANCH
+            echo "Switched to remote version."
+        else
             echo "Canceling."
             exit 1
         fi
