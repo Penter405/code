@@ -3,6 +3,14 @@
 ## use a code space always
 ## chatgpt
 https://chatgpt.com/share/6928f630-f644-8013-88d1-686021a51411
+## 檔案處理
+```
+touch 新檔案
+mkdir 新資料夾
+rm 刪檔案或資料夾
+rm -r 超危險的刪除方法
+```
+
 ## 本地完全吃到雲端
 ```
 git fetch origin
