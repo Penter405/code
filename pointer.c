@@ -48,7 +48,7 @@ void output_chinese_character(){
 int search(char* what){
     int size;
     
-    switch what{
+    switch (*what){
         
     }
 }
