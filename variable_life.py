@@ -18,30 +18,88 @@ mutable=[]
 immutable=3
 def call_global_in_function():
     try:
-        mutable.append(1)
-        print("local can call global mutable")
+        print(mutable)
+        print("local can call global mutable")#
     except:
         print("local cant call global mutable")
     try:
-        immutable += 1
-        print("local can call global immutable")
+        print(immutable)
+        print("local can call global immutable")#
     except:
         print("local can not call global immutable")
 
-#call_global_in_function()
+
 def call_global_in_functions():
     def inner_function():
         print("running inner function")
         try:
-            mutable.append(1)
-            print("double local can call global mutable")
+            print(mutable)
+            print("double local can call global mutable")#
         except:
             print("double local cant call global mutable")
         try:
-            immutable += 1
-            print("double local can call global immutable")
+            print(immutable)
+            print("double local can call global immutable")#
         except:
             print("double local can not call global immutable")
     inner_function()
 
-call_global_in_functions()
+
+def call_same_name_local_to_other():
+    try:
+        if mutable ==[]:
+            print("mutable   name hit,local difined next row, same indentation, global,nonlocal,built in win")
+        else:
+            print("mutable   name hit,local difined next row, same indentation, local in win")
+    except:
+        print("mutable   name was taken by local in this function, like 'int a;'")#
+    try:
+        if immutable == 3:
+            print("immutable name hit,local difined next row, same indentation, global,nonlocal,built in win")
+        else:
+            print("immutable name hit,local difined next row, same indentation, local in win")
+    except:
+        print("immutable name was taken by local in this function, like 'int a;'")#
+    mutable=[3]
+    immutable=5
+    if mutable ==[]:
+        print("mutable name hit, global,nonlocal,built in win")
+    else:
+        print("mutable name hit, local win")#
+    if immutable ==3:
+        print("immutable name hit, global,nonlocal,built in win")
+    else:
+        print("immutable name hit, local win")#
+
+def call_same_name_local_to_other_with_tell_use_global():
+    global mutable, immutable
+    print("telling to use global")
+    try:
+        if mutable ==[]:
+            print("mutable   name hit,told its global, same indentation, global,nonlocal,built in win")#
+        else:
+            print("mutable   name hit,told its global, same indentation, local in win")
+    except:
+        print("mutable   name was taken by local in this function, like 'int a;'")
+    try:
+        if immutable == 3:
+            print("immutable name hit,told its global, same indentation, global,nonlocal,built in win")#
+        else:
+            print("immutable name hit, told its global, same indentation, local in win")
+    except:
+        print("immutable name was taken by local in this function, like 'int a;'")
+    mutable=[3]
+    immutable=5
+    if mutable ==[3]:
+        print("mutable name hit, global,nonlocal,built in win")
+    else:
+        print("mutable name hit, local win")
+    if immutable ==5:
+        print("immutable name hit, global,nonlocal,built in win")
+    else:
+        print("immutable name hit, local win")
+
+#call_global_in_function()
+#call_global_in_functions()
+call_same_name_local_to_other()
+call_same_name_local_to_other_with_tell_use_global()
