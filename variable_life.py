@@ -1,3 +1,19 @@
+"""
+x軸, caller from:global, local, double local
+y軸, callee to: global, local, double local
+y軸itself:mutable, immutable
+r軸:name hit, name not same
+
+3x3x2x2=36 cases
+"""
+"""
+if variable defined in indentation of self function:
+    the name will be compile, name always own by the function
+else:
+    search from local (if search it difined in local, run row 11)>>nonlocal>>global>>built in
+"""
+
+
 mutable=[]
 immutable=3
 def call_global_in_function():
