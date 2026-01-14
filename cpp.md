@@ -2,15 +2,15 @@
 
 這份文件的目標是：
 
-> **把 Python 常見功能，對應到 C++ 需要 `#include` 什麼，以及基本用法方向**。
+> **把 Python 常見功能，對應到 C++ 需要 #include 什麼，以及基本用法方向**。
 
 ---
 
-## 1. print / 輸出 {#print}
+## 1. print / 輸出 {#func-print}
 
 ### C++ header
 
-* [`<iostream>`](#print)
+* [`<iostream>`](#header-iostream)
 * 🔙 [回到 Header 對照表](#cpp-headers-table)
 
 ### Python
@@ -28,12 +28,12 @@ std::cout << "hello" << x << std::endl;
 
 ---
 
-## 2. input / 輸入 {#input}
+## 2. input / 輸入 {#func-input}
 
 ### C++ header
 
-* [`<iostream>`](#input)
-* [`<string>`](#input)
+* [`<iostream>`](#header-iostream)
+* [`<string>`](#header-string)
 * 🔙 [回到 Header 對照表](#cpp-headers-table)
 
 ### Python
@@ -53,11 +53,11 @@ std::cin >> x;
 
 ---
 
-## 3. list / 動態陣列 {#list}
+## 3. list / 動態陣列 {#func-list}
 
 ### C++ header
 
-* [`<vector>`](#list)
+* [`<vector>`](#header-vector)
 * 🔙 [回到 Header 對照表](#cpp-headers-table)
 
 ### Python
@@ -77,12 +77,12 @@ a.push_back(4);
 
 ---
 
-## 4. dict / key-value {#dict}
+## 4. dict / key-value {#func-dict}
 
 ### C++ header
 
-* [`<map>`](#dict)
-* [`<unordered_map>`](#dict)
+* [`<map>`](#header-map)
+* [`<unordered_map>`](#header-unordered-map)
 * 🔙 [回到 Header 對照表](#cpp-headers-table)
 
 ### Python
@@ -103,12 +103,12 @@ d["b"] = 2;
 
 ---
 
-## 5. set {#set}
+## 5. set {#func-set}
 
 ### C++ header
 
-* [`<set>`](#set)
-* [`<unordered_set>`](#set)
+* [`<set>`](#header-set)
+* [`<unordered_set>`](#header-unordered-set)
 * 🔙 [回到 Header 對照表](#cpp-headers-table)
 
 ### Python
@@ -126,12 +126,12 @@ std::set<int> s = {1, 2, 3};
 
 ---
 
-## 6. for loop / iterable {#for-loop}
+## 6. for loop / iterable {#func-for-loop}
 
 ### C++ header
 
-* [`<vector>`](#for-loop)
-* [`<iostream>`](#for-loop)
+* [`<vector>`](#header-vector)
+* [`<iostream>`](#header-iostream)
 * 🔙 [回到 Header 對照表](#cpp-headers-table)
 
 ### Python
@@ -153,11 +153,11 @@ for (int x : a) {
 
 ---
 
-## 7. len() {#len}
+## 7. len() {#func-len}
 
 ### C++ header
 
-* [`<vector>`](#len)
+* [`<vector>`](#header-vector)
 * 🔙 [回到 Header 對照表](#cpp-headers-table)
 
 ### Python
@@ -174,11 +174,11 @@ a.size();
 
 ---
 
-## 8. string {#string}
+## 8. string {#func-string}
 
 ### C++ header
 
-* [`<string>`](#string)
+* [`<string>`](#header-string)
 * 🔙 [回到 Header 對照表](#cpp-headers-table)
 
 ### Python
@@ -198,12 +198,12 @@ s += "def";
 
 ---
 
-## 9. sort {#sort}
+## 9. sort {#func-sort}
 
 ### C++ header
 
-* [`<algorithm>`](#sort)
-* [`<vector>`](#sort)
+* [`<algorithm>`](#header-algorithm)
+* [`<vector>`](#header-vector)
 * 🔙 [回到 Header 對照表](#cpp-headers-table)
 
 ### Python
@@ -222,11 +222,11 @@ std::sort(a.begin(), a.end());
 
 ---
 
-## 10. max / min {#max-min}
+## 10. max / min {#func-max-min}
 
 ### C++ header
 
-* [`<algorithm>`](#max-min)
+* [`<algorithm>`](#header-algorithm)
 * 🔙 [回到 Header 對照表](#cpp-headers-table)
 
 ### Python
@@ -246,11 +246,11 @@ std::min(x, y);
 
 ---
 
-## 11. math {#math}
+## 11. math {#func-math}
 
 ### C++ header
 
-* [`<cmath>`](#math)
+* [`<cmath>`](#header-cmath)
 * 🔙 [回到 Header 對照表](#cpp-headers-table)
 
 ### Python
@@ -269,11 +269,11 @@ std::sqrt(4);
 
 ---
 
-## 12. file I/O {#file-io}
+## 12. file I/O {#func-file-io}
 
 ### C++ header
 
-* [`<fstream>`](#file-io)
+* [`<fstream>`](#header-fstream)
 * 🔙 [回到 Header 對照表](#cpp-headers-table)
 
 ### Python
@@ -294,11 +294,11 @@ std::string data;
 
 ---
 
-## 13. random {#random}
+## 13. random {#func-random}
 
 ### C++ header
 
-* [`<random>`](#random)
+* [`<random>`](#header-random)
 * 🔙 [回到 Header 對照表](#cpp-headers-table)
 
 ### Python
@@ -320,12 +320,12 @@ int x = dis(gen);
 
 ---
 
-## 14. time / sleep {#time-sleep}
+## 14. time / sleep {#func-time-sleep}
 
 ### C++ header
 
-* [`<chrono>`](#time-sleep)
-* [`<thread>`](#time-sleep)
+* [`<chrono>`](#header-chrono)
+* [`<thread>`](#header-thread)
 * 🔙 [回到 Header 對照表](#cpp-headers-table)
 
 ### Python
@@ -345,11 +345,11 @@ std::this_thread::sleep_for(std::chrono::seconds(1));
 
 ---
 
-## 15. assert {#assert}
+## 15. assert {#func-assert}
 
 ### C++ header
 
-* [`<cassert>`](#assert)
+* [`<cassert>`](#header-cassert)
 * 🔙 [回到 Header 對照表](#cpp-headers-table)
 
 ### Python
@@ -369,20 +369,21 @@ assert(x > 0);
 
 ## 16. C++ 標頭檔 → 功能總對照表（Python 思維版） {#cpp-headers-table}
 
-| C++ header                 | 對應 Python 思維         | 核心解釋（最小必要知識）                         |
-| -------------------------- | -------------------- | ------------------------------------ |
-| [`<iostream>`](#print)     | `print`, `input`     | 提供 `std::cout / std::cin`，負責所有基本 I/O |
-| [`<string>`](#string)      | `str`                | `std::string`，自動管理記憶體的字串型別           |
-| [`<vector>`](#list)        | `list`               | 動態陣列，支援 `push_back`、`size`           |
-| [`<map>`](#dict)           | `dict`（有序）           | 紅黑樹實作，key 會排序                        |
-| [`<unordered_map>`](#dict) | `dict`（無序）           | Hash table，平均 O(1) 查找                |
-| [`<set>`](#set)            | `set`                | 有序、不重複元素集合                           |
-| [`<algorithm>`](#sort)     | `sort`, `max`, `min` | 與容器解耦的泛型演算法                          |
-| [`<numeric>`](#max-min)    | `sum`                | `accumulate`、數值型演算法                  |
-| [`<cmath>`](#math)         | `math`               | 數學函式（sqrt, pow, abs）                 |
-| [`<fstream>`](#file-io)    | `open()`             | 檔案 I/O                               |
-| [`<chrono>`](#time-sleep)  | `time`               | 型別安全的時間系統                            |
-| [`<thread>`](#time-sleep)  | `sleep`, threading   | thread 與 sleep_for                   |
-| [`<cassert>`](#assert)     | `assert`             | 偵錯期條件檢查                              |
+| C++ header                                 | 對應 Python 思維         | 核心解釋（最小必要知識）                         |
+| ------------------------------------------ | -------------------- | ------------------------------------ |
+| [`<iostream>`](#header-iostream)           | `print`, `input`     | 提供 `std::cout / std::cin`，負責所有基本 I/O |
+| [`<string>`](#header-string)               | `str`                | `std::string`，自動管理記憶體的字串型別           |
+| [`<vector>`](#header-vector)               | `list`               | 動態陣列，支援 `push_back`、`size`           |
+| [`<map>`](#header-map)                     | `dict`（有序）           | 紅黑樹實作，key 會排序                        |
+| [`<unordered_map>`](#header-unordered-map) | `dict`（無序）           | Hash table，平均 O(1) 查找                |
+| [`<set>`](#header-set)                     | `set`                | 有序、不重複元素集合                           |
+| [`<unordered_set>`](#header-unordered-set) | `set`                | 無序集合，Hash table 基礎                   |
+| [`<algorithm>`](#header-algorithm)         | `sort`, `max`, `min` | 與容器解耦的泛型演算法                          |
+| [`<numeric>`](#header-numeric)             | `sum`                | `accumulate`、數值型演算法                  |
+| [`<cmath>`](#header-cmath)                 | `math`               | 數學函式（sqrt, pow, abs）                 |
+| [`<fstream>`](#header-fstream)             | `open()`             | 檔案 I/O                               |
+| [`<chrono>`](#header-chrono)               | `time`               | 型別安全的時間系統                            |
+| [`<thread>`](#header-thread)               | `sleep`, threading   | thread 與 sleep_for                   |
+| [`<cassert>`](#header-cassert)             | `assert`             | 偵錯期條件檢查                              |
 
 ---

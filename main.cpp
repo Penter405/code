@@ -1,28 +1,27 @@
 #include <iostream>
-using namespace std;
 class human{
     public:
     int hight,kg;
     char name[11];
     void output_name(){
-       cout<<name<<"\n";
+       std::cout<<name<<"\n";
     }
 };
 
 int math(){
     human pencel;
     pencel.kg=99;
-    cout<<pencel.kg<<"\n";
-    cout<<"enter your name(under 11 character):";cin>>pencel.name;
+    std::cout<<pencel.kg<<"\n";
+    std::cout<<"enter your name(under 11 character):";std::cin>>pencel.name;
     pencel.output_name();
     return 0;
 }
 
 int first_try(){
     int x;
-    cout<<"enter a integer:";cin>>x;
-    cout<<"your integer is :"<<x<<"\n";
-    cout<<"done\n";
+    std::cout<<"enter a integer:";std::cin>>x;
+    std::cout<<"your integer is :"<<x<<"\n";
+    std::cout<<"done\n";
     return 0;
 }
 
