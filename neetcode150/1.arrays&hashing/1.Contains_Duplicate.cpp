@@ -4,7 +4,7 @@
 class Solution {
 public:
     bool hasDuplicate(std::vector<int>& nums) {
-        bool yesno;
+        bool yesno=0;
         int size;
         std::unordered_map<int,int> hash;
         size=nums.size();
