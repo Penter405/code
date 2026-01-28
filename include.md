@@ -3,7 +3,7 @@
  * 常用 C++ include（LeetCode / 刷題 / 比賽版本）
  * 下面每個 include 後面都有功能解釋。
  ************************************************************/
-
+## #include <[array](https://en.cppreference.com/w/cpp/container/array.html)> 
 ## #include <[vector](https://en.cppreference.com/w/cpp/container/vector.html)>           // 動態陣列 (最常用的容器)
 ## #include <[string](https://en.cppreference.com/w/cpp/header/string.html)>          // 字串處理
 ## #include <[queue](https://en.cppreference.com/w/cpp/container/queue.html)>           // BFS、隊列、priority_queue
