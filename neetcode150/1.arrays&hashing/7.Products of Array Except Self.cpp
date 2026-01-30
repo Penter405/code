@@ -42,6 +42,7 @@ public:
 //follow up: make prefix work into for loop of pushing back result 
 //not finishing solution two below
 //i think linked_list not allow method "push_back" and some same name from vector. we need to go cppreference.com
+//now we see postfix from back to front. but add result from begin to end. this make problem because we change value of will be using element, which is iterator of postfix will use.
 class Solution {
 public:
     vector<int> productExceptSelf(vector<int>& nums) {
