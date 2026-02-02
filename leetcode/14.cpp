@@ -1,6 +1,10 @@
+#include <vector>
+#include <string>
+#include <iostream>
+
 class Solution {
 public:
-    string longestCommonPrefix(vector<string>& strs) {
+    std::string longestCommonPrefix(std::vector<std::string>& strs) {
         //remenber all from first element
         std::string result="";
         //char seeing;
