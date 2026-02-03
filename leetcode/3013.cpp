@@ -1,8 +1,21 @@
 class Solution {
+private:
+    int lowest(std::vector me){
+        int iter=0;result=0, size=me.size(),big=0;
+
+        for(;iter<size;++iter){
+            if(me[result]>big){
+                result=iter
+                big=me[result];
+            }
+        }
+        return result;
+    }
 public:
-    long long minimumCost(vector<int>& nums, int k, int dist) {
+    long long minimumCost(vector<int>& old_nums, int k, int dist) {
+        std::std::forward_list<int> nums(old_nums.begin(), old_nums.end());
         int result=nums[0];
-        
+
     }
 };
 //first element of subarray <=dist
@@ -29,3 +42,5 @@ two pointer,
 //if k is 5, we need k,first of source, and k-2 top less element
 //{1,2,3,4,5|,6,7,1}
 //find least of source array
+//int size is 2* 10^10
+//should i change vector nums to forward_list? i would remove element and i dont need random access.
