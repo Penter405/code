@@ -1,4 +1,4 @@
-#one version in neetcode
+#one version in neetcode :neetcode150/2.Two Pointers/3.3Sum.py
 class Solution:
     def rm_useless(self,s):
         result=[s[0]]
