@@ -1,3 +1,4 @@
+#one version in neetcode
 class Solution:
     def rm_useless(self,s):
         result=[s[0]]
