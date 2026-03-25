@@ -7,6 +7,11 @@ X組和Y組彼此沒有的科目（不包含相同科目）
 """print(dir(list))
 exit()
 """
+"""help(sorted)#The sort method of list is in-place
+exit()
+"""
+#print(sorted([3,2,1]))
+#exit()
 x=set()
 print("Enter group X's subjects:")
 while 1:
@@ -24,4 +29,4 @@ while 1:
     y.add(s)
 
 for rs in [x|y,x&y,y-x,x^y]:
-    print(list(rs).sort())
+    print(sorted(list(rs)))
