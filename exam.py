@@ -20,3 +20,7 @@ a^b#element in a or b, but not sametime in a and b
 #mutable object passing by
 list.sort#in place
 sorted(reverse=False)#default from small to big, which is False , return sorted iterator
+
+#reverse matrix
+matrix=[]
+matrix=[list(row) for row in zip(*matrix)][::-1]
