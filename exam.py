@@ -24,3 +24,21 @@ sorted(reverse=False)#default from small to big, which is False , return sorted 
 #reverse matrix
 matrix=[]
 matrix=[list(row) for row in zip(*matrix)][::-1]
+
+#find 公因數
+import math
+s=[48,120,60]
+result=s[0]
+for rs in s:
+    result=math.gcd(result,rs)
+print(result)
+#find 公倍數
+import math
+
+nums = list(map(int, input().split()))
+
+l = nums[0]
+for n in nums[1:]:
+    l = l * n // math.gcd(l, n)
+
+print(l)
