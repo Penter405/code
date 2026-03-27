@@ -56,3 +56,41 @@ class Solution:
                         hash[tuple(bot)]=1
                     right-=1
         return result
+
+#version two
+class Solution:
+    def threeSum(self, nums: list[int]) -> list[list[int]]:
+        nums.sort()
+        #print(nums)
+        result=set()
+        for i in range(len(nums)-2):
+
+            p1=i+1
+            p2=len(nums)-1
+            while p2>p1 and p2>=0 and p1<len(nums):
+                #print(i,p1,p2)
+                #print(nums[i],nums[p1],nums[p2])
+                if p1==p2:
+                    p2-=1
+                if nums[p1]+nums[p2]+nums[i]==0:
+                    #print("good")
+                    x=(nums[i],nums[p1],nums[p2])
+                    #print(type(x))
+                    result.add(x)
+                    while p1<p2 and nums[p1]==nums[p2]:
+                        p2-=1
+                if nums[p1]+nums[p2]+nums[i]>=0:
+                    p2-=1
+                elif nums[p1]+nums[p2]+nums[i]<0:
+                    p1+=1
+                else:
+                    print("error")
+        return list(result)
+"""
+#12345
+2+4=8
+1+2=3
+1+3=4
+1+4=5
+
+"""
