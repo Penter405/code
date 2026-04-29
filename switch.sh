@@ -7,136 +7,105 @@ git fetch --all
 CUR_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 echo "Current branch: $CUR_BRANCH"
 
-
 ############################################
-# 檢查是否有未儲存變更（最穩定）
+# 1. 檢查是否有未儲存變更 (Unstaged/Untracked)
 ############################################
 if [[ -n "$(git status --porcelain)" ]]; then
-    echo "You have local changes (modified/staged/untracked)."
-    read -p "You have not saved your changes on local. Continue and lose your updates on local? (Y/n) " bot
+    echo "⚠️ You have local changes that are not committed."
+    read -p "Discard these changes and lose updates? (Y/n) " bot
 
     if [[ "$bot" == "Y" ]]; then
         echo "Discarding local changes..."
         git reset --hard
         git clean -fd
-
     else
-        # 第二問：是否要幫你儲存？
-        read -p "We can help you save your file and continue. Save and continue? (Y/n) " bot2
-
+        read -p "Save and commit these changes first? (Y/n) " bot2
         if [[ "$bot2" == "Y" ]]; then
-
-            # 第三問：選擇 add . 或 add -A
-            echo "Choose how to save your changes:"
-            echo "1) git add .    (stage new & modified files; DO NOT stage deletions)"
-            echo "2) git add -A   (stage ALL changes including deletions)"
-            read -p "Enter 1 or 2: " add_choice
-
-            if [[ "$add_choice" == "1" ]]; then
-                echo "Running: git add ."
-                git add .
-            elif [[ "$add_choice" == "2" ]]; then
-                echo "Running: git add -A"
-                git add -A
-            else
-                echo "Invalid choice. Canceling."
-                exit 1
-            fi
-
+            echo "1) git add . (exclude deletions)"
+            echo "2) git add -A (include deletions)"
+            read -p "Choice: " add_choice
+            [[ "$add_choice" == "2" ]] && git add -A || git add .
             git commit -m "Auto-save by switch script"
-            echo "Saved."
-
         else
-            echo "Canceling."
+            echo "Canceling script to protect your work."
             exit 1
         fi
     fi
 fi
 
-
 ############################################
-# 檢查本地 commit 與遠端 commit
+# 2. 檢查 Commit 不一致 (The Merger)
 ############################################
 LOCAL=$(git rev-parse HEAD)
 REMOTE=$(git rev-parse origin/$CUR_BRANCH)
 
 if [ "$LOCAL" != "$REMOTE" ]; then
-    read -p "Commit not same with remote! Switch and lose your commits? (Y/n) " bot
+    echo "------------------------------------------------"
+    echo "🚨 Local and GitHub commits have diverged!"
+    echo "------------------------------------------------"
+    echo "1) Discard local commits (Use GitHub version)"
+    echo "2) Push local commits (Try updating GitHub)"
+    echo "3) BACKUP local files & Sync with GitHub (Recommended)"
+    echo "4) Cancel"
+    read -p "Choose (1-4): " merge_choice
 
-    if [[ "$bot" == "Y" ]]; then
-        git reset --hard origin/$CUR_BRANCH
-        echo "Local commits discarded, switched to remote version."
-
-    else
-        read -p "Save local commits to GitHub and then switch? (Y/n) " bot2
-
-        if [[ "$bot2" == "Y" ]]; then
-            git push origin $CUR_BRANCH
-            echo "Local commits pushed to GitHub."
+    case $merge_choice in
+        1)
             git reset --hard origin/$CUR_BRANCH
-            echo "Switched to remote version."
-        else
-            echo "Canceling."
+            ;;
+        2)
+            git push origin $CUR_BRANCH
+            git reset --hard origin/$CUR_BRANCH
+            ;;
+        3)
+            echo "📦 Isolating local differences..."
+            # 找出與遠端不同的檔案清單
+            git diff --name-only HEAD origin/$CUR_BRANCH | while IFS= read -r file; do
+                if [ -f "$file" ]; then
+                    dir=$(dirname "$file")
+                    base=$(basename "$file")
+                    backup_dir="$dir/local_backup"
+                    
+                    mkdir -p "$backup_dir"
+                    cp "$file" "$backup_dir/$base"
+                    echo " -> Backed up: $file"
+                fi
+            done
+            echo "🔄 Syncing workspace with GitHub..."
+            git reset --hard origin/$CUR_BRANCH
+            echo "✅ Done. Differences are in 'local_backup' folders."
+            ;;
+        *)
+            echo "Exiting."
             exit 1
-        fi
-    fi
+            ;;
+    esac
 fi
 
-
 ############################################
-# 取得遠端 branches（main 排第一）
+# 3. 取得並切換 Branch
 ############################################
 REMOTE_BRANCHES=($(git branch -r | sed 's/origin\///' | grep -v 'HEAD'))
-
+# (Sorting logic to put 'main' first)
 MAIN_BRANCH=""
 OTHER_BRANCHES=()
 for br in "${REMOTE_BRANCHES[@]}"; do
-    if [ "$br" = "main" ]; then
-        MAIN_BRANCH="main"
-    else
-        OTHER_BRANCHES+=("$br")
-    fi
+    [[ "$br" == "main" ]] && MAIN_BRANCH="main" || OTHER_BRANCHES+=("$br")
 done
+IFS=$'\n' OTHER_BRANCHES=($(sort <<<"${OTHER_BRANCHES[*]}")); unset IFS
+REMOTE_BRANCHES=($MAIN_BRANCH "${OTHER_BRANCHES[@]}")
 
-IFS=$'\n' OTHER_BRANCHES=($(sort <<<"${OTHER_BRANCHES[*]}"))
-unset IFS
+echo -e "\nRemote branches:"
+for i in "${!REMOTE_BRANCHES[@]}"; do echo "$i) ${REMOTE_BRANCHES[$i]}"; done
 
-if [ -n "$MAIN_BRANCH" ]; then
-    REMOTE_BRANCHES=("$MAIN_BRANCH" "${OTHER_BRANCHES[@]}")
-else
-    REMOTE_BRANCHES=("${OTHER_BRANCHES[@]}")
-fi
-
-
-############################################
-# 列出遠端 branches
-############################################
-echo "Remote branches on GitHub:"
-for i in "${!REMOTE_BRANCHES[@]}"; do
-    echo "$i) ${REMOTE_BRANCHES[$i]}"
-done
-
-
-############################################
-# 互動式切換 branch
-############################################
-echo -n "Enter the index of the branch you want to switch to: "
-read NEW_IDX
-
-if ! [[ "$NEW_IDX" =~ ^[0-9]+$ ]] || [ "$NEW_IDX" -ge "${#REMOTE_BRANCHES[@]}" ]; then
-    echo "Invalid index."
-    exit 1
-fi
-
+read -p "Enter index to switch: " NEW_IDX
 NEW_BRANCH=${REMOTE_BRANCHES[$NEW_IDX]}
 
-# 已存在本地就 checkout，否则建立 tracking branch
 if git show-ref --verify --quiet refs/heads/$NEW_BRANCH; then
     git checkout $NEW_BRANCH
 else
     git checkout -b $NEW_BRANCH origin/$NEW_BRANCH
 fi
 
-# 強制同步雲端版本
 git reset --hard origin/$NEW_BRANCH
-echo "Switched to branch '$NEW_BRANCH' and synced with GitHub."
+echo "Successfully switched and synced to $NEW_BRANCH."
