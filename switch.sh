@@ -8,44 +8,32 @@ CUR_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 echo "Current branch: $CUR_BRANCH"
 
 ############################################
-# 1. 檢查是否有未儲存變更 (Unstaged/Untracked)
+# 1. 檢查是否有未儲存變更 (包含備份夾)
 ############################################
 if [[ -n "$(git status --porcelain)" ]]; then
-    echo "⚠️ You have local changes that are not committed."
-    read -p "Discard these changes and lose updates? (Y/n) " bot
-
-    if [[ "$bot" == "Y" ]]; then
-        echo "Discarding local changes..."
-        git reset --hard
-        git clean -fd
+    echo "⚠️ You have uncommitted changes."
+    read -p "Save and commit them now? (Y/n): " save_choice
+    if [[ "$save_choice" == "Y" || "$save_choice" == "y" ]]; then
+        git add .
+        git commit -m "Auto-save: $(date +'%Y-%m-%d %H:%M:%S')"
     else
-        read -p "Save and commit these changes first? (Y/n) " bot2
-        if [[ "$bot2" == "Y" ]]; then
-            echo "1) git add . (exclude deletions)"
-            echo "2) git add -A (include deletions)"
-            read -p "Choice: " add_choice
-            [[ "$add_choice" == "2" ]] && git add -A || git add .
-            git commit -m "Auto-save by switch script"
-        else
-            echo "Canceling script to protect your work."
-            exit 1
-        fi
+        echo "Proceeding without committing..."
     fi
 fi
 
 ############################################
-# 2. 檢查 Commit 不一致 (The Merger)
+# 2. 精確檢查 Commit 狀態 (The Merger)
 ############################################
-LOCAL=$(git rev-parse HEAD)
-REMOTE=$(git rev-parse origin/$CUR_BRANCH)
+BEHIND_COUNT=$(git rev-list --count HEAD..origin/$CUR_BRANCH)
+AHEAD_COUNT=$(git rev-list --count origin/$CUR_BRANCH..HEAD)
 
-if [ "$LOCAL" != "$REMOTE" ]; then
+if [ "$BEHIND_COUNT" -gt 0 ] && [ "$AHEAD_COUNT" -gt 0 ]; then
     echo "------------------------------------------------"
-    echo "🚨 Local and GitHub commits have diverged!"
+    echo "🚨 REAL CONFLICT: Both you and GitHub have new work!"
     echo "------------------------------------------------"
     echo "1) Discard local commits (Use GitHub version)"
-    echo "2) Push local commits (Try updating GitHub)"
-    echo "3) BACKUP local files & Sync with GitHub (Recommended)"
+    echo "2) Normal Push (Might fail if behind)"
+    echo "3) BACKUP, SYNC & UPLOAD (Safe Merge)"
     echo "4) Cancel"
     read -p "Choose (1-4): " merge_choice
 
@@ -54,58 +42,93 @@ if [ "$LOCAL" != "$REMOTE" ]; then
             git reset --hard origin/$CUR_BRANCH
             ;;
         2)
-            git push origin $CUR_BRANCH
-            git reset --hard origin/$CUR_BRANCH
+            git push origin $CUR_BRANCH || echo "Push rejected. Use Option 3."
             ;;
         3)
-            echo "📦 Isolating local differences..."
-            # 找出與遠端不同的檔案清單
-            git diff --name-only HEAD origin/$CUR_BRANCH | while IFS= read -r file; do
+            echo "📦 Backing up unique files..."
+            # 備份差異檔案，但不備份備份資料夾本身
+            git diff --name-only HEAD origin/$CUR_BRANCH | grep -v "local_backup/" | while IFS= read -r file; do
                 if [ -f "$file" ]; then
                     dir=$(dirname "$file")
-                    base=$(basename "$file")
-                    backup_dir="$dir/local_backup"
-                    
-                    mkdir -p "$backup_dir"
-                    cp "$file" "$backup_dir/$base"
+                    mkdir -p "$dir/local_backup"
+                    cp "$file" "$dir/local_backup/$(basename "$file")"
                     echo " -> Backed up: $file"
                 fi
             done
-            echo "🔄 Syncing workspace with GitHub..."
-            git reset --hard origin/$CUR_BRANCH
-            echo "✅ Done. Differences are in 'local_backup' folders."
+            
+            echo "💾 Committing backups..."
+            git add .
+            git commit -m "Add local backup of conflicted files"
+            
+            echo "🔄 Rebase-pulling from GitHub..."
+            if git pull --rebase origin $CUR_BRANCH; then
+                echo "⬆️ Uploading to GitHub..."
+                git push origin $CUR_BRANCH
+                echo "✅ Success! Backups are now on GitHub."
+            else
+                echo "❌ Severe conflict. Please resolve manually."
+                exit 1
+            fi
             ;;
         *)
-            echo "Exiting."
             exit 1
             ;;
     esac
+
+elif [ "$BEHIND_COUNT" -gt 0 ]; then
+    echo "☁️ GitHub is ahead. Auto-syncing..."
+    git pull --rebase origin $CUR_BRANCH
+
+elif [ "$AHEAD_COUNT" -gt 0 ]; then
+    echo "🚀 Your local is ahead. Pushing..."
+    git push origin $CUR_BRANCH
 fi
 
 ############################################
-# 3. 取得並切換 Branch
+# 3. 取得遠端分支 (Fixed Sort: main is index 0)
 ############################################
-REMOTE_BRANCHES=($(git branch -r | sed 's/origin\///' | grep -v 'HEAD'))
-# (Sorting logic to put 'main' first)
-MAIN_BRANCH=""
-OTHER_BRANCHES=()
-for br in "${REMOTE_BRANCHES[@]}"; do
-    [[ "$br" == "main" ]] && MAIN_BRANCH="main" || OTHER_BRANCHES+=("$br")
+# 1. 取得原始清單並過濾掉 HEAD
+RAW_LIST=$(git branch -r | sed 's/origin\///' | grep -v 'HEAD')
+
+# 2. 分離 main 與其他分支
+MAIN_EXISTS=$(echo "$RAW_LIST" | grep -w "main")
+OTHER_BRANCHES=$(echo "$RAW_LIST" | grep -v -w "main" | sort)
+
+# 3. 組合清單
+FINAL_LIST=()
+if [ -n "$MAIN_EXISTS" ]; then
+    FINAL_LIST+=("main")
+fi
+
+while read -r line; do
+    if [ -n "$line" ]; then
+        FINAL_LIST+=("$line")
+    fi
+done <<< "$OTHER_BRANCHES"
+
+echo -e "\nRemote branches on GitHub:"
+for i in "${!FINAL_LIST[@]}"; do
+    echo "$i) ${FINAL_LIST[$i]}"
 done
-IFS=$'\n' OTHER_BRANCHES=($(sort <<<"${OTHER_BRANCHES[*]}")); unset IFS
-REMOTE_BRANCHES=($MAIN_BRANCH "${OTHER_BRANCHES[@]}")
 
-echo -e "\nRemote branches:"
-for i in "${!REMOTE_BRANCHES[@]}"; do echo "$i) ${REMOTE_BRANCHES[$i]}"; done
-
+############################################
+# 4. 互動式切換
+############################################
 read -p "Enter index to switch: " NEW_IDX
-NEW_BRANCH=${REMOTE_BRANCHES[$NEW_IDX]}
 
-if git show-ref --verify --quiet refs/heads/$NEW_BRANCH; then
-    git checkout $NEW_BRANCH
+if [[ -n "$NEW_IDX" && "$NEW_IDX" =~ ^[0-9]+$ ]] && [ "$NEW_IDX" -lt "${#FINAL_LIST[@]}" ]; then
+    TARGET_BRANCH=${FINAL_LIST[$NEW_IDX]}
+    echo "Switching to '$TARGET_BRANCH'..."
+    
+    if git show-ref --verify --quiet refs/heads/$TARGET_BRANCH; then
+        git checkout $TARGET_BRANCH
+    else
+        git checkout -b $TARGET_BRANCH origin/$TARGET_BRANCH
+    fi
+    
+    # 切換後確保是最新的
+    git pull --rebase origin $TARGET_BRANCH 2>/dev/null
+    echo "Successfully switched to $TARGET_BRANCH."
 else
-    git checkout -b $NEW_BRANCH origin/$NEW_BRANCH
+    echo "Staying on $CUR_BRANCH."
 fi
-
-git reset --hard origin/$NEW_BRANCH
-echo "Successfully switched and synced to $NEW_BRANCH."
