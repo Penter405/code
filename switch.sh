@@ -3,49 +3,34 @@
 echo "Fetching remote branches..."
 git fetch --all
 
-# 取得當前 branch
 CUR_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 echo "Current branch: $CUR_BRANCH"
 
 ############################################
-# 1. 檢查是否有未儲存變更 (Unstaged/Untracked)
+# 1. 檢查未儲存變更 (包含備份檔)
 ############################################
 if [[ -n "$(git status --porcelain)" ]]; then
-    echo "⚠️ You have local changes that are not committed."
-    read -p "Discard these changes and lose updates? (Y/n) " bot
-
-    if [[ "$bot" == "Y" ]]; then
-        echo "Discarding local changes..."
-        git reset --hard
-        git clean -fd
+    echo "⚠️ You have uncommitted changes."
+    read -p "Save and commit them now? (Y/n): " save_choice
+    if [[ "$save_choice" == "Y" || "$save_choice" == "y" ]]; then
+        git add .
+        git commit -m "Auto-save: $(date +'%Y-%m-%d %H:%M:%S')"
     else
-        read -p "Save and commit these changes first? (Y/n) " bot2
-        if [[ "$bot2" == "Y" ]]; then
-            echo "1) git add . (exclude deletions)"
-            echo "2) git add -A (include deletions)"
-            read -p "Choice: " add_choice
-            [[ "$add_choice" == "2" ]] && git add -A || git add .
-            git commit -m "Auto-save by switch script"
-        else
-            echo "Canceling script to protect your work."
-            exit 1
-        fi
+        echo "Proceeding without committing..."
     fi
 fi
 
 ############################################
-# 2. 檢查 Commit 不一致 (The Merger)
+# 2. 精確檢查 Commit 狀態
 ############################################
-LOCAL=$(git rev-parse HEAD)
-REMOTE=$(git rev-parse origin/$CUR_BRANCH)
+BEHIND_COUNT=$(git rev-list --count HEAD..origin/$CUR_BRANCH)
+AHEAD_COUNT=$(git rev-list --count origin/$CUR_BRANCH..HEAD)
 
-if [ "$LOCAL" != "$REMOTE" ]; then
+if [ "$BEHIND_COUNT" -gt 0 ] && [ "$AHEAD_COUNT" -gt 0 ]; then
     echo "------------------------------------------------"
-    echo "🚨 Local and GitHub commits have diverged!"
+    echo "🚨 REAL CONFLICT: Both you and GitHub have new work!"
     echo "------------------------------------------------"
-    echo "1) Discard local commits (Use GitHub version)"
-    echo "2) Push local commits (Try updating GitHub)"
-    echo "3) BACKUP local files & Sync with GitHub (Recommended)"
+    echo "1) Discard local / 2) Normal Push / 3) BACKUP, SYNC & UPLOAD (Recommended)"
     echo "4) Cancel"
     read -p "Choose (1-4): " merge_choice
 
@@ -54,58 +39,59 @@ if [ "$LOCAL" != "$REMOTE" ]; then
             git reset --hard origin/$CUR_BRANCH
             ;;
         2)
-            git push origin $CUR_BRANCH
-            git reset --hard origin/$CUR_BRANCH
+            # 嘗試普通 Push，若遠端較新會失敗，這是安全的
+            git push origin $CUR_BRANCH || echo "Push rejected. Please use Option 3 to sync."
             ;;
         3)
-            echo "📦 Isolating local differences..."
-            # 找出與遠端不同的檔案清單
+            echo "📦 Backing up unique files..."
             git diff --name-only HEAD origin/$CUR_BRANCH | while IFS= read -r file; do
                 if [ -f "$file" ]; then
                     dir=$(dirname "$file")
-                    base=$(basename "$file")
-                    backup_dir="$dir/local_backup"
-                    
-                    mkdir -p "$backup_dir"
-                    cp "$file" "$backup_dir/$base"
+                    mkdir -p "$dir/local_backup"
+                    cp "$file" "$dir/local_backup/$(basename "$file")"
                     echo " -> Backed up: $file"
                 fi
             done
-            echo "🔄 Syncing workspace with GitHub..."
-            git reset --hard origin/$CUR_BRANCH
-            echo "✅ Done. Differences are in 'local_backup' folders."
+            
+            echo "💾 Committing backups to local history..."
+            git add .
+            git commit -m "Add local backup of conflicted files"
+            
+            echo "🔄 Rebase-pulling from GitHub (Safely merging history)..."
+            # 使用 rebase 把你的備份 commit 接在雲端更新之後
+            if git pull --rebase origin $CUR_BRANCH; then
+                echo "⬆️ Uploading synchronized version to GitHub..."
+                git push origin $CUR_BRANCH
+                echo "✅ Success! GitHub now has your code and the backups."
+            else
+                echo "❌ Rebase failed due to severe conflict. Manual merge required."
+                # 若 rebase 失敗，通常需要手動處理
+            fi
             ;;
         *)
-            echo "Exiting."
             exit 1
             ;;
     esac
+
+elif [ "$BEHIND_COUNT" -gt 0 ]; then
+    echo "☁️ GitHub is ahead. Pulling updates..."
+    git pull --rebase origin $CUR_BRANCH
+
+elif [ "$AHEAD_COUNT" -gt 0 ]; then
+    echo "🚀 Your local is ahead. Pushing to GitHub..."
+    git push origin $CUR_BRANCH
 fi
 
 ############################################
-# 3. 取得並切換 Branch
+# 3. 互動式分支切換
 ############################################
-REMOTE_BRANCHES=($(git branch -r | sed 's/origin\///' | grep -v 'HEAD'))
-# (Sorting logic to put 'main' first)
-MAIN_BRANCH=""
-OTHER_BRANCHES=()
-for br in "${REMOTE_BRANCHES[@]}"; do
-    [[ "$br" == "main" ]] && MAIN_BRANCH="main" || OTHER_BRANCHES+=("$br")
-done
-IFS=$'\n' OTHER_BRANCHES=($(sort <<<"${OTHER_BRANCHES[*]}")); unset IFS
-REMOTE_BRANCHES=($MAIN_BRANCH "${OTHER_BRANCHES[@]}")
-
+REMOTE_BRANCHES=($(git branch -r | sed 's/origin\///' | grep -v 'HEAD' | sort))
 echo -e "\nRemote branches:"
 for i in "${!REMOTE_BRANCHES[@]}"; do echo "$i) ${REMOTE_BRANCHES[$i]}"; done
 
 read -p "Enter index to switch: " NEW_IDX
-NEW_BRANCH=${REMOTE_BRANCHES[$NEW_IDX]}
-
-if git show-ref --verify --quiet refs/heads/$NEW_BRANCH; then
+if [[ -n "$NEW_IDX" ]]; then
+    NEW_BRANCH=${REMOTE_BRANCHES[$NEW_IDX]}
     git checkout $NEW_BRANCH
-else
-    git checkout -b $NEW_BRANCH origin/$NEW_BRANCH
+    git pull --rebase origin $NEW_BRANCH 2>/dev/null
 fi
-
-git reset --hard origin/$NEW_BRANCH
-echo "Successfully switched and synced to $NEW_BRANCH."
