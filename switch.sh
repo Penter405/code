@@ -7,7 +7,7 @@ CUR_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 echo "Current branch: $CUR_BRANCH"
 
 ############################################
-# 1. 檢查未儲存變更
+# 1. 檢查未儲存變更 (排除備份資料夾)
 ############################################
 if [[ -n "$(git status --porcelain | grep -v "all_local_backups/")" ]]; then
     echo "⚠️ You have uncommitted changes."
@@ -19,7 +19,7 @@ if [[ -n "$(git status --porcelain | grep -v "all_local_backups/")" ]]; then
 fi
 
 ############################################
-# 2. 精確檢查 Commit 狀態
+# 2. 精確檢查 Commit 狀態 (The Merger)
 ############################################
 BEHIND_COUNT=$(git rev-list --count HEAD..origin/$CUR_BRANCH)
 AHEAD_COUNT=$(git rev-list --count origin/$CUR_BRANCH..HEAD)
@@ -36,25 +36,45 @@ if [ "$BEHIND_COUNT" -gt 0 ] && [ "$AHEAD_COUNT" -gt 0 ]; then
         2) git push origin $CUR_BRANCH ;;
         3)
             echo "📦 Backing up unique files to 'all_local_backups'..."
-            # 建立一個統一的備份資料夾，避免找不到檔案
             BACKUP_ROOT="all_local_backups/$(date +%Y%m%d_%H%M%S)"
             mkdir -p "$BACKUP_ROOT"
 
-            # 找出所有與遠端不同的檔案並備份
-            git diff --name-only HEAD origin/$CUR_BRANCH | while read -r file; do
+            git diff --name-only HEAD origin/$CUR_BRANCH | grep -v "all_local_backups/" | while read -r file; do
                 if [ -f "$file" ]; then
                     dest="$BACKUP_ROOT/$file"
                     mkdir -p "$(dirname "$dest")"
                     cp -f "$file" "$dest"
-                    echo " -> Backed up: $file"
+                    
+                    # --- 根據語言自動選擇註解符號 ---
+                    extension="${file##*.}"
+                    case "$extension" in
+                        py|sh|yml|yaml|txt|conf) 
+                            comment="#" ;;
+                        c|cpp|h|hpp|java|js|ts|cs|go|rs) 
+                            comment="//" ;;
+                        html|xml) 
+                            comment="" ;; # 特殊處理 HTML
+                        css)
+                            comment="/* Original Path: ${file} */" ;;
+                        *) 
+                            comment="--" ;; # 預設 SQL/Lua 風格
+                    esac
+                    
+                    # 寫入路徑資訊 (如果是 HTML/CSS 已經內含文字，直接插入即可)
+                    if [[ "$extension" == "html" || "$extension" == "xml" || "$extension" == "css" ]]; then
+                        sed -i "1i ${comment}" "$dest"
+                    else
+                        sed -i "1i ${comment} Original Path: ${file}" "$dest"
+                    fi
+                    
+                    echo " -> Backed up: $file (with path tag)"
                 fi
             done
             
             git add .
-            git commit -m "Add local backup before rebase"
+            git commit -m "Add local backup with injected paths"
             
             echo "🔄 Rebase-pulling (Auto-resolving with -X theirs)..."
-            # 關鍵：使用 -X theirs 自動選擇 GitHub 版本解決衝突
             if git pull --rebase -X theirs origin $CUR_BRANCH; then
                 echo "⬆️ Uploading to GitHub..."
                 git push origin $CUR_BRANCH
@@ -68,8 +88,11 @@ if [ "$BEHIND_COUNT" -gt 0 ] && [ "$AHEAD_COUNT" -gt 0 ]; then
     esac
 
 elif [ "$BEHIND_COUNT" -gt 0 ]; then
+    echo "☁️ GitHub is ahead. Pulling..."
     git pull --rebase origin $CUR_BRANCH
+
 elif [ "$AHEAD_COUNT" -gt 0 ]; then
+    echo "🚀 Your local is ahead. Pushing..."
     git push origin $CUR_BRANCH
 fi
 
@@ -87,7 +110,7 @@ while read -r line; do [ -n "$line" ] && FINAL_LIST+=("$line"); done <<< "$OTHER
 echo -e "\nRemote branches:"
 for i in "${!FINAL_LIST[@]}"; do echo "$i) ${FINAL_LIST[$i]}"; done
 
-read -p "Enter index to switch: " NEW_IDX
+read -p "Enter index: " NEW_IDX
 if [[ -n "$NEW_IDX" && "$NEW_IDX" =~ ^[0-9]+$ ]] && [ "$NEW_IDX" -lt "${#FINAL_LIST[@]}" ]; then
     TARGET_BRANCH=${FINAL_LIST[$NEW_IDX]}
     git checkout $TARGET_BRANCH
