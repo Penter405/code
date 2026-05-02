@@ -1,0 +1,15 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build-asm",
+            "type": "shell",
+            "command": "nasm -f elf64 -g -F dwarf ${file} -o ${fileBasenameNoExtension}.o && ld ${fileBasenameNoExtension}.o -o ${fileBasenameNoExtension}",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        }
+    ]
+}
