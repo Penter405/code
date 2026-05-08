@@ -1,7 +1,11 @@
 # section .data
 ###### any variable set here is like ``int x=5;`` , set variable with pre data inside
 ## define a variable
-
+```
+name_of_variable  size_of_variable  the_data
+```
+## the table: size_of_variable
+|key_word|
 # section .bss
 ###### any variable set here is like ``int x;`` , set variable without pre data inside, so get data here before put data would be Cpp-UB
 ## define a variable
