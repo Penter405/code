@@ -1,3 +1,4 @@
+/*
 public class Program {
     public static void main(String[] args) {
         String name1=System.in.readLine();
@@ -6,3 +7,4 @@ public class Program {
         System.out.printIn(name2);
     }
 }
+*/

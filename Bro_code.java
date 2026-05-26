@@ -7,13 +7,14 @@ public class Main{
     }
 }
 */
-private class Human{
+/*private class Human{
     public static void main(String[] args) {
         int kg=50;
         int tall_cm=160;
         System.out.println(kg+' '+tall_cm);
     }
 }
+*/
 public class Bro_code{
     public static void main(String[] args){
         //data type
