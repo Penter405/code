@@ -17,8 +17,9 @@ private class Human{
     }
 }
 */
-import java.util.Scanner;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Scanner;
 public class Bro_code2{
     public static void main(String[] args){
         //data type
@@ -64,6 +65,10 @@ public class Bro_code2{
         }
         //ArrayList--pyhton list--dymanic array
         ArrayList my_list=new ArrayList<>();
+		Method[]  m=ArrayList.class.getDeclaredMethods();
+		for(Method me:m){
+		System.out.println(me);
+		}
 
     }
 }
