@@ -125,14 +125,21 @@ class CommitAnalyzer:
     def get_changed_files(self, start_commit: str, end_commit: str) -> List[str]:
         """
         獲取在指定提交範圍內變更的文件列表
-        只返回在這個範圍內 有實際變更 的文件
+        逐個 commit 檢查變更，確保捕捉到所有曾經被修改過的文件
         """
         self.log('info', f"正在獲取 {start_commit[:7]}...{end_commit} 之間的變更文件...")
-        output = self.run_git_command(
-            f"git diff --name-only {start_commit}..{end_commit}"
-        )
-        files = [f for f in output.split('\n') if f]
-        return files
+        
+        commits_output = self.run_git_command(f"git log --format='%H' {start_commit}..{end_commit}")
+        commits = [c for c in commits_output.split('\n') if c]
+        
+        changed_files = set()
+        for commit in commits:
+            output = self.run_git_command(f"git diff --name-only {commit}^..{commit}")
+            for f in output.split('\n'):
+                if f:
+                    changed_files.add(f)
+                    
+        return list(changed_files)
     
     def get_file_latest_status(self, file_path: str, end_commit: str) -> Dict:
         """
@@ -196,33 +203,33 @@ class CommitAnalyzer:
     def get_file_diff(self, start_commit: str, end_commit: str, file_path: str, mode: str) -> Dict:
         """
         獲取單個文件的差異
-        只計算在 start_commit..end_commit 範圍內的變更
+        透過迴圈檢查範圍內的每個 commit，計算每個 commit 對應的變更行數加總
         """
-        if mode == "new_only":
+        commits_output = self.run_git_command(f"git log --format='%H' {start_commit}..{end_commit}")
+        commits = [c for c in commits_output.split('\n') if c]
+        
+        total_added = 0
+        total_removed = 0
+        
+        for commit in commits:
+            # 計算該 commit 和前一個 commit 的差異
             added = self.run_git_command(
-                f"git diff {start_commit}..{end_commit} -- {file_path} | grep '^+' | grep -v '^+++' | wc -l"
+                f"git diff {commit}^..{commit} -- {file_path} | grep '^+' | grep -v '^+++' | wc -l"
             )
-            return {
-                'file': file_path,
-                'added_lines': int(added) if added.isdigit() else 0,
-                'removed_lines': 0,
-                'total_changes': int(added) if added.isdigit() else 0
-            }
-        else:
-            added = self.run_git_command(
-                f"git diff {start_commit}..{end_commit} -- {file_path} | grep '^+' | grep -v '^+++' | wc -l"
-            )
-            removed = self.run_git_command(
-                f"git diff {start_commit}..{end_commit} -- {file_path} | grep '^-' | grep -v '^---' | wc -l"
-            )
-            added_count = int(added) if added.isdigit() else 0
-            removed_count = int(removed) if removed.isdigit() else 0
-            return {
-                'file': file_path,
-                'added_lines': added_count,
-                'removed_lines': removed_count,
-                'total_changes': added_count + removed_count
-            }
+            total_added += int(added) if added.isdigit() else 0
+            
+            if mode != "new_only":
+                removed = self.run_git_command(
+                    f"git diff {commit}^..{commit} -- {file_path} | grep '^-' | grep -v '^---' | wc -l"
+                )
+                total_removed += int(removed) if removed.isdigit() else 0
+                
+        return {
+            'file': file_path,
+            'added_lines': total_added,
+            'removed_lines': total_removed,
+            'total_changes': total_added + total_removed
+        }
     
     def get_file_locations(self, files: List[str]) -> Dict[str, str]:
         """詢問文件位置"""
@@ -350,9 +357,85 @@ class CommitAnalyzer:
         with open(self.metadata_file, 'w', encoding='utf-8') as f:
             json.dump(self.metadata, f, indent=2, ensure_ascii=False)
     
+    def select_and_pull_branch(self) -> bool:
+        """選擇並更新分支"""
+        self.log('section', '🌐 第零步: 選擇並更新分支')
+        
+        # 獲取所有本地和遠程分支
+        output = self.run_git_command("git branch -a --format='%(refname:short)'")
+        if not output:
+            self.log('error', "無法獲取分支列表")
+            return False
+            
+        # 過濾並去重
+        raw_branches = [b.strip() for b in output.split('\n') if b.strip()]
+        branches = set()
+        for b in raw_branches:
+            if b.startswith('origin/'):
+                b = b[7:]
+            if b and b != 'HEAD':
+                branches.add(b)
+                
+        branches = sorted(list(branches))
+        current_branch = self.run_git_command("git rev-parse --abbrev-ref HEAD")
+        
+        print(f"\n{Colors.CYAN}當前分支: {current_branch}{Colors.ENDC}")
+        print(f"\n可用分支:")
+        for i, branch in enumerate(branches, 1):
+            marker = "*" if branch == current_branch else " "
+            print(f"  {marker} {i}. {branch}")
+            
+        print(f"\n{Colors.GRAY}(按 Enter 使用當前分支 {current_branch}){Colors.ENDC}")
+        choice = input(f"{Colors.CYAN}請選擇要分析的分支編號或名稱: {Colors.ENDC}").strip()
+        
+        selected_branch = current_branch
+        if choice:
+            if choice.isdigit() and 1 <= int(choice) <= len(branches):
+                selected_branch = branches[int(choice) - 1]
+            elif choice in branches:
+                selected_branch = choice
+            else:
+                self.log('error', f"無效的分支選擇: {choice}")
+                return False
+                
+        # 檢查是否有未提交的更改
+        status = self.run_git_command("git status --porcelain")
+        if status:
+            self.log('error', "有未提交的更改，無法安全切換或拉取分支。請先提交或暫存更改。")
+            return False
+            
+        # 切換分支
+        if selected_branch != current_branch:
+            print(f"\n{Colors.BLUE}正在切換到分支 {selected_branch}...{Colors.ENDC}")
+            checkout_res = subprocess.run(
+                f"git checkout {selected_branch}", 
+                shell=True, cwd=self.repo_path, capture_output=True, text=True
+            )
+            if checkout_res.returncode != 0:
+                self.log('error', f"無法切換到分支 {selected_branch}:\n{checkout_res.stderr}")
+                return False
+                
+        # 拉取最新代碼
+        print(f"{Colors.BLUE}正在拉取最新代碼 (git pull origin {selected_branch})...{Colors.ENDC}")
+        pull_res = subprocess.run(
+            f"git pull origin {selected_branch}", 
+            shell=True, cwd=self.repo_path, capture_output=True, text=True
+        )
+        
+        if pull_res.returncode != 0:
+            self.log('error', f"無法安全拉取分支 {selected_branch}，請手動解決衝突或檢查遠程倉庫狀態。")
+            print(f"{Colors.RED}{pull_res.stderr}{Colors.ENDC}")
+            return False
+            
+        self.log('success', f"分支 {selected_branch} 已更新並準備就緒")
+        return True
+
     def run(self):
         """執行主程序"""
         try:
+            if not self.select_and_pull_branch():
+                return
+                
             commits = self.get_all_commits()
             if not commits:
                 self.log('error', "找不到提交記錄")
