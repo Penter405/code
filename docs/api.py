@@ -11,6 +11,7 @@ except ImportError as e:
 
 import os
 import json
+import urllib.request
 from database import Database
 
 app = Flask(__name__)
@@ -134,6 +135,20 @@ def get_database_info():
             'success': False,
             'error': str(e)
         }), 500
+
+@app.route('/api/file/content', methods=['GET'])
+def get_file_content():
+    """獲取文件內容"""
+    raw_url = request.args.get('url', '')
+    if not raw_url:
+        return jsonify({'success': False, 'error': '缺少 URL 參數'}), 400
+    try:
+        req = urllib.request.Request(raw_url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req) as response:
+            content = response.read().decode('utf-8')
+        return jsonify({'success': True, 'content': content})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/search', methods=['GET'])
 def search_analyses():

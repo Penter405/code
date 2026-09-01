@@ -621,6 +621,26 @@
             <div id="modalBody"></div>
         </div>
     </div>
+
+    <!-- 代碼查看 Modal -->
+    <div id="codeModal" class="modal">
+        <div class="modal-content" style="max-width: 1000px; max-height: 90vh;">
+            <div class="modal-header">
+                <h2 id="codeModalTitle">查看代碼</h2>
+                <div>
+                    <a id="githubLinkBtn" href="#" target="_blank" class="btn btn-secondary" style="margin-right: 10px; text-decoration: none;">🔗 在 GitHub 查看</a>
+                    <button class="modal-close" onclick="closeCodeModal()">✕</button>
+                </div>
+            </div>
+            <div id="codeLoading" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <div>正在載入代碼...</div>
+            </div>
+            <div id="codeContent" style="display: none; background: #f8f9fa; padding: 15px; border-radius: 6px; overflow-x: auto; max-height: 65vh;">
+                <pre><code id="codeBlock" style="font-family: 'Courier New', monospace; font-size: 13px;"></code></pre>
+            </div>
+        </div>
+    </div>
     
     <script>
         let currentAnalyses = [];
@@ -726,6 +746,10 @@
                         <div style="font-size: 12px; margin-top: 5px;">${new Date(selectedAnalysis.last_updated).toLocaleString('zh-TW')}</div>
                     </div>
                 </div>
+                <div style="margin-bottom: 20px;">
+                    <button class="btn btn-primary" onclick="viewCode('${selectedAnalysis.raw_github_url}', '${selectedAnalysis.github_url}', '${selectedAnalysis.file_name}')">👁️ 查看代碼</button>
+                    ${selectedAnalysis.github_url ? `<a href="${selectedAnalysis.github_url}" target="_blank" class="btn btn-secondary" style="text-decoration: none; margin-left: 10px;">🔗 GitHub</a>` : ''}
+                </div>
                 <div style="background: var(--light); padding: 15px; border-radius: 8px; margin-top: 15px;">
                     <strong style="font-size: 12px; color: var(--primary);">💡 提示</strong>
                     <p style="font-size: 12px; margin-top: 8px; color: var(--gray);">此分析包含在指定提交範圍內此文件的變更統計。</p>
@@ -786,14 +810,71 @@
         function closeModal() {
             document.getElementById('detailModal').classList.remove('active');
         }
+
+        // 關閉代碼 Modal
+        function closeCodeModal() {
+            document.getElementById('codeModal').classList.remove('active');
+        }
         
         // 點擊外部關閉 Modal
         window.onclick = (event) => {
             const modal = document.getElementById('detailModal');
+            const codeModal = document.getElementById('codeModal');
             if (event.target === modal) {
                 modal.classList.remove('active');
             }
+            if (event.target === codeModal) {
+                codeModal.classList.remove('active');
+            }
         };
+
+        // 查看代碼
+        async function viewCode(rawUrl, githubUrl, fileName) {
+            if (!rawUrl) {
+                alert('沒有可用的原始碼 URL');
+                return;
+            }
+            
+            document.getElementById('codeModal').classList.add('active');
+            document.getElementById('codeModalTitle').textContent = `📄 ${fileName}`;
+            document.getElementById('githubLinkBtn').href = githubUrl || '#';
+            
+            const loading = document.getElementById('codeLoading');
+            const contentDiv = document.getElementById('codeContent');
+            const codeBlock = document.getElementById('codeBlock');
+            
+            loading.style.display = 'block';
+            contentDiv.style.display = 'none';
+            codeBlock.textContent = '';
+            
+            try {
+                // 通過後端 API 獲取內容以避免 CORS 問題，如果失敗則嘗試直接獲取
+                let content = '';
+                try {
+                    const response = await fetch(`/api/file/content?url=${encodeURIComponent(rawUrl)}`);
+                    const data = await response.json();
+                    if (data.success) {
+                        content = data.content;
+                    } else {
+                        throw new Error(data.error);
+                    }
+                } catch (e) {
+                    // 降級直接請求
+                    const rawResponse = await fetch(rawUrl);
+                    if (!rawResponse.ok) throw new Error('獲取代碼失敗');
+                    content = await rawResponse.text();
+                }
+                
+                codeBlock.textContent = content;
+                loading.style.display = 'none';
+                contentDiv.style.display = 'block';
+            } catch (error) {
+                console.error('Error fetching code:', error);
+                loading.style.display = 'none';
+                contentDiv.style.display = 'block';
+                codeBlock.textContent = `載入失敗: ${error.message}\n請點擊右上角 "在 GitHub 查看" 直接瀏覽。`;
+            }
+        }
     </script>
 </body>
 </html>

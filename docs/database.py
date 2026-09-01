@@ -61,6 +61,8 @@ class Database:
                 analysis_id TEXT NOT NULL,
                 file_name TEXT NOT NULL,
                 file_location TEXT NOT NULL,
+                github_url TEXT,
+                raw_github_url TEXT,
                 added_lines INTEGER NOT NULL,
                 removed_lines INTEGER NOT NULL,
                 total_changes INTEGER NOT NULL,
@@ -70,6 +72,17 @@ class Database:
                 UNIQUE(analysis_id, file_name)
             )
         ''')
+        
+        # 嘗試添加新列以兼容舊數據庫
+        try:
+            cursor.execute('ALTER TABLE file_changes ADD COLUMN github_url TEXT')
+        except sqlite3.OperationalError:
+            pass  # 列已存在
+            
+        try:
+            cursor.execute('ALTER TABLE file_changes ADD COLUMN raw_github_url TEXT')
+        except sqlite3.OperationalError:
+            pass  # 列已存在
         
         # 創建提交信息表
         cursor.execute('''
@@ -115,7 +128,8 @@ class Database:
             return analysis_id
     
     def insert_file_change(self, analysis_id: str, file_name: str, file_location: str,
-                          added_lines: int, removed_lines: int, total_changes: int):
+                          added_lines: int, removed_lines: int, total_changes: int,
+                          github_url: str = None, raw_github_url: str = None):
         """插入文件變更記錄"""
         conn = self.connect()
         cursor = conn.cursor()
@@ -126,9 +140,9 @@ class Database:
         try:
             cursor.execute('''
                 INSERT OR REPLACE INTO file_changes
-                (analysis_id, file_name, file_location, added_lines, removed_lines, total_changes, file_type)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (analysis_id, file_name, file_location, added_lines, removed_lines, total_changes, file_type))
+                (analysis_id, file_name, file_location, github_url, raw_github_url, added_lines, removed_lines, total_changes, file_type)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (analysis_id, file_name, file_location, github_url, raw_github_url, added_lines, removed_lines, total_changes, file_type))
             
             conn.commit()
         except sqlite3.Error as e:

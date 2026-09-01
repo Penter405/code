@@ -79,7 +79,7 @@ class CommitAnalyzer:
         """獲取所有提交信息"""
         self.log('info', "正在獲取提交記錄...")
         output = self.run_git_command(
-            "git log --pretty=format:'%H|%an|%ae|%ai|%s'"
+            'git log --pretty=format:"%H|%an|%ae|%ai|%s"'
         )
         commits = []
         for line in output.split('\n'):
@@ -184,7 +184,8 @@ class CommitAnalyzer:
         print(f"\n{Colors.CYAN}2. 顯示所有更改 (新增 + 刪除){Colors.ENDC}")
         print(f"   📝 統計在選擇範圍內 新增 和 刪除 的代碼行數")
         
-        mode = input(f"\n{Colors.CYAN}請選擇 (1 或 2) {Colors.GRAY}[預設: 1]{Colors.CYAN}: {Colors.ENDC}").strip() or "1"
+        print(f"\n{Colors.GRAY}(按 Enter 使用默認值){Colors.ENDC}")
+        mode = input(f"{Colors.CYAN}請選擇 (1 或 2) {Colors.GRAY}[預設: 1]{Colors.CYAN}: {Colors.ENDC}").strip() or "1"
         
         result = "new_only" if mode == "1" else "all_changes"
         mode_text = "僅新代碼" if mode == "1" else "所有更改"
@@ -312,7 +313,9 @@ class CommitAnalyzer:
                 file_location=locations[info['file']],
                 added_lines=info['added_lines'],
                 removed_lines=info['removed_lines'],
-                total_changes=info['total_changes']
+                total_changes=info['total_changes'],
+                github_url=self.generate_github_url(info['file'], branch),
+                raw_github_url=self.generate_raw_github_url(info['file'], branch)
             )
         
         # 插入提交信息
