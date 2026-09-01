@@ -1,0 +1,6 @@
+# 給腳本執行權限
+chmod +x /workspaces/code/docs/run.sh
+chmod +x /workspaces/code/docs/main.py
+
+# 執行自動化腳本
+bash /workspaces/code/docs/run.sh

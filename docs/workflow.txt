@@ -1,0 +1,11 @@
+this is for main.py
+1.ask me which commit start until end(default solve all not before that commit,can adjust)(default of start is first commit)
+(write default in gray colar)
+
+
+2.ask user mode(every different code, only new code)(from that code get every file latest status, make a list)
+
+3.from that list ask user where to put it into
+
+
+4.update or create a file maybe json, data should include lastest time of that file, file name, file place of github(we get commit from github) or even code on that file(or you can make index.html fetch that, up to you)(wait, we can just fetch that file from github when user tapped that file on web)
