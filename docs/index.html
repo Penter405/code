@@ -769,11 +769,14 @@
         </div>
     </div>
 
+    <!-- Works with file:// too: main.py generates this local, frontend-only data file. -->
+    <script src="portfolio_data.js"></script>
     <script>
         // Use relative path to api endpoints
         const API_BASE = '/api';
 
         let allAnalyses = [];
+        const staticCodeById = {};
 
         document.addEventListener('DOMContentLoaded', () => {
             fetchDatabaseInfo();
@@ -840,7 +843,7 @@
                 if (json.success && json.data.length > 0) {
                     allAnalyses = json.data;
 
-                    // Update Repo Header based on the first record (assuming single repo for now)
+                    // The API reads docs/portfolio.db, including branch-saved files.
                     if (allAnalyses.length > 0) {
                         document.getElementById('repoOwner').innerText = allAnalyses[0].repo_owner || "Owner";
                         document.getElementById('repoName').innerText = allAnalyses[0].repo_name || "Repository";
@@ -858,19 +861,19 @@
 
                 // Fallback to static JSON for testing if API is down
                 try {
-                    const fallback = await fetch('file_metadata.json');
-                    const staticData = await fallback.json();
-
-                    // Convert static format to mock analysis format to display something
-                    const vals = Object.values(staticData);
-                    if (vals.length > 0) {
-                        document.getElementById('repoOwner').innerText = vals[0].repo ? vals[0].repo.split('/')[0] : "Penter";
-                        document.getElementById('repoName').innerText = vals[0].repo ? vals[0].repo.split('/')[1] : "Code";
-
-                        // Grouping logic for static omitted for brevity, just show error
-                        noData.innerHTML = `<h3>API Server is not running</h3><p>Please run api.py backend.</p>`;
-                        noData.style.display = 'block';
-                    }
+                    const staticData = window.PORTFOLIO_DATA;
+                    if (!staticData) throw new Error('portfolio_data.js has not been generated yet');
+                    allAnalyses = staticData.folders.map(folder => ({
+                        analysis_id: `folder-${folder.id}`, repo_owner: 'Penter405', repo_name: 'code',
+                        branch: 'multiple branches', mode: 'saved files', start_commit: '0000000', end_commit: '0000000',
+                        total_files: folder.file_count, created_at: folder.created_at, folder_name: folder.name,
+                        static_files: folder.files
+                    }));
+                    staticData.folders.forEach(folder => folder.files.forEach(file => {
+                        staticCodeById[file.id] = file.static_code || '';
+                    }));
+                    renderAnalyses(allAnalyses);
+                    list.style.display = 'block';
                 } catch (e) {
                     noData.style.display = 'block';
                 }
@@ -891,7 +894,7 @@
                         <div class="chapter-header">
                             <div class="chapter-title">
                                 <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M1.5 14.25c0 .138.112.25.25.25H4v-1.25a.75.75 0 01.75-.75h2.5a.75.75 0 01.75.75v1.25h2.25a.25.25 0 00.25-.25V1.75a.25.25 0 00-.25-.25h-8.5a.25.25 0 00-.25.25v12.5zM1.75 0h8.5C11.216 0 12 .784 12 1.75v12.5A1.75 1.75 0 0110.25 16h-8.5A1.75 1.75 0 010 14.25V1.75C0 .784.784 0 1.75 0zM3 3.25c0-.138.112-.25.25-.25h2.5a.25.25 0 01.25.25v1.5a.25.25 0 01-.25.25h-2.5a.25.25 0 01-.25-.25v-1.5zm0 4c0-.138.112-.25.25-.25h2.5a.25.25 0 01.25.25v1.5a.25.25 0 01-.25.25h-2.5a.25.25 0 01-.25-.25v-1.5z"></path></svg>
-                                Chapter / Analysis Run
+                                ${item.folder_name || 'Folder'}
                             </div>
                             <span class="commit-hash">${item.start_commit.substring(0, 7)}...${item.end_commit.substring(0, 7)}</span>
                         </div>
@@ -952,8 +955,10 @@
             fileItems.innerHTML = '';
 
             try {
-                const res = await fetch(`${API_BASE}/analysis/${analysisId}/files`);
-                const json = await res.json();
+                // In frontend-only mode this comes from portfolio_data.js;
+                // otherwise read the same records through Flask.
+                const res = analysis.static_files ? null : await fetch(`${API_BASE}/analysis/${analysisId}/files`);
+                const json = analysis.static_files ? { success: true, data: analysis.static_files } : await res.json();
 
                 if (json.success) {
                     const files = json.data;
@@ -973,7 +978,7 @@
                         }
 
                         fileItems.insertAdjacentHTML('beforeend', `
-                            <div class="file-item" style="cursor:pointer;" onclick="viewFileCode('${f.raw_github_url}', '${f.github_url}', '${f.file_name}')">
+                            <div class="file-item" style="cursor:pointer;" onclick="viewFileCode(${f.id || 'null'}, '${f.raw_github_url}', '${f.github_url}', '${f.file_name}')">
                                 <div class="file-info">
                                     <svg class="file-icon" width="16" height="16" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M2 1.75C2 .784 2.784 0 3.75 0h8.5C13.216 0 14 .784 14 1.75v12.5A1.75 1.75 0 0112.25 16h-8.5A1.75 1.75 0 012 14.25V1.75zm1.75-.25a.25.25 0 00-.25.25v12.5c0 .138.112.25.25.25h8.5a.25.25 0 00.25-.25V1.75a.25.25 0 00-.25-.25h-8.5zM4 4h8v1H4V4zm0 3h8v1H4V7zm0 3h4v1H4v-1z"></path></svg>
                                     <span class="file-name">${f.file_location || f.file_name}</span>
@@ -997,7 +1002,7 @@
         }
 
         // Code Viewer
-        async function viewFileCode(rawUrl, githubUrl, fileName) {
+        async function viewFileCode(fileId, rawUrl, githubUrl, fileName) {
             const modal = document.getElementById('codeModal');
             const title = document.getElementById('modalFilename');
             const btn = document.getElementById('githubBtn');
@@ -1022,8 +1027,12 @@
             try {
                 // Try API first to avoid CORS
                 let content = '';
+                if (fileId && Object.prototype.hasOwnProperty.call(staticCodeById, fileId)) {
+                    content = staticCodeById[fileId];
+                } else {
                 try {
-                    const res = await fetch(`${API_BASE}/file/content?url=${encodeURIComponent(rawUrl)}`);
+                    const savedUrl = fileId ? `${API_BASE}/portfolio/file/${fileId}/content` : `${API_BASE}/file/content?url=${encodeURIComponent(rawUrl)}`;
+                    const res = await fetch(savedUrl);
                     const json = await res.json();
                     if (json.success) content = json.content;
                     else throw new Error(json.error);
@@ -1032,6 +1041,7 @@
                     const res = await fetch(rawUrl);
                     if (!res.ok) throw new Error('Fetch failed');
                     content = await res.text();
+                }
                 }
 
                 codeBlock.textContent = content;

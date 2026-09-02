@@ -13,12 +13,24 @@ import os
 import json
 import urllib.request
 from database import Database
+from portfolio_db import PortfolioDB
 
 app = Flask(__name__)
 CORS(app)
 
 # 初始化數據庫
 db = Database(os.path.join(os.path.dirname(__file__), "analysis.db"))
+portfolio_db = PortfolioDB(os.path.join(os.path.dirname(__file__), "portfolio.db"))
+
+
+def portfolio_folder_id(analysis_id):
+    """Folder cards use a stable API id while retaining the old UI routes."""
+    if not analysis_id.startswith('folder-'):
+        return None
+    try:
+        return int(analysis_id.split('-', 1)[1])
+    except ValueError:
+        return None
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -30,9 +42,19 @@ def health_check():
 
 @app.route('/api/analyses', methods=['GET'])
 def get_analyses():
-    """獲取所有分析記錄"""
+    """Return PortfolioDB folders in the card format consumed by index.html."""
     try:
-        records = db.get_all_analysis_records()
+        records = []
+        for folder in portfolio_db.get_all_folders():
+            records.append({
+                'analysis_id': f"folder-{folder['id']}",
+                'repo_owner': 'Penter405', 'repo_name': 'code',
+                'branch': 'multiple branches', 'mode': 'saved files',
+                'start_commit': '0000000', 'end_commit': '0000000',
+                'total_files': folder.get('file_count', 0),
+                'created_at': folder.get('created_at', ''),
+                'folder_name': folder['name'], 'parent_id': folder.get('parent_id')
+            })
         return jsonify({
             'success': True,
             'data': records,
@@ -78,7 +100,17 @@ def get_analysis(analysis_id):
 def get_analysis_files(analysis_id):
     """獲取特定分析的文件變更"""
     try:
-        files = db.get_file_changes(analysis_id)
+        folder_id = portfolio_folder_id(analysis_id)
+        if folder_id is None:
+            files = db.get_file_changes(analysis_id)
+        else:
+            files = []
+            for file_data in portfolio_db.get_files_in_folder(folder_id):
+                files.append({
+                    **file_data,
+                    'file_location': file_data['file_path'],
+                    'added_lines': 0, 'removed_lines': 0, 'total_changes': 0,
+                })
         return jsonify({
             'success': True,
             'data': files,
@@ -125,7 +157,9 @@ def get_analysis_statistics(analysis_id):
 def get_database_info():
     """獲取數據庫信息"""
     try:
-        info = db.get_db_info()
+        info = portfolio_db.get_db_info()
+        info['total_analyses'] = info['total_folders']
+        info['total_commits'] = 0
         return jsonify({
             'success': True,
             'data': info
@@ -147,6 +181,22 @@ def get_file_content():
         with urllib.request.urlopen(req) as response:
             content = response.read().decode('utf-8')
         return jsonify({'success': True, 'content': content})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/portfolio/file/<int:file_id>/content', methods=['GET'])
+def get_saved_branch_file_content(file_id):
+    """Read only a branch copy registered in PortfolioDB (never an arbitrary path)."""
+    try:
+        file_data = next((f for f in portfolio_db.get_all_files() if f['id'] == file_id), None)
+        if not file_data or not file_data.get('static_path'):
+            return jsonify({'success': False, 'error': 'Saved branch copy not found'}), 404
+        docs_dir = os.path.realpath(os.path.dirname(__file__))
+        path = os.path.realpath(os.path.join(docs_dir, file_data['static_path']))
+        if os.path.commonpath([docs_dir, path]) != docs_dir or not os.path.isfile(path):
+            return jsonify({'success': False, 'error': 'Saved branch copy not found'}), 404
+        with open(path, encoding='utf-8', errors='replace') as source:
+            return jsonify({'success': True, 'content': source.read()})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 

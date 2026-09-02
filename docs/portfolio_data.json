@@ -1,7 +1,7 @@
 {
   "meta": {
     "repo": "Penter405/code",
-    "last_updated": "2026-09-02T21:36:06.705259",
+    "last_updated": "2026-09-02T21:46:15.981880",
     "total_folders": 2,
     "total_files": 6
   },
@@ -9,6 +9,7 @@
     {
       "id": 3,
       "name": "AOV括樸",
+      "parent_id": null,
       "created_at": "2026-09-02 13:33:17",
       "updated_at": "2026-09-02T21:34:56.558443",
       "file_count": 5,
@@ -93,6 +94,7 @@
     {
       "id": 2,
       "name": "graph",
+      "parent_id": null,
       "created_at": "2026-09-02 12:37:35",
       "updated_at": "2026-09-02T21:36:03.539970",
       "file_count": 1,

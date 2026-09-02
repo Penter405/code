@@ -1173,6 +1173,9 @@ class PortfolioGUI:
     def run(self):
         """運行 GUI"""
         self.root.mainloop()
+        # One main.py run is enough for the static site: this writes both
+        # portfolio_data.json and the file://-friendly portfolio_data.js.
+        self.db.export_portfolio_json()
 
 
 # =============================================================================

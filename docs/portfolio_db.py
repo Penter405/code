@@ -527,6 +527,7 @@ class PortfolioDB:
             folder_data = {
                 "id": folder['id'],
                 "name": folder['name'],
+                "parent_id": folder.get('parent_id'),
                 "created_at": folder['created_at'],
                 "updated_at": folder['updated_at'],
                 "file_count": len(files),
@@ -556,6 +557,25 @@ class PortfolioDB:
 
         with open(output_path, 'w', encoding='utf-8') as fp:
             json.dump(portfolio, fp, indent=2, ensure_ascii=False, default=str)
+
+        # A normal script tag can load this file even when index.html is opened
+        # directly with file://, unlike fetch() which browsers often block for
+        # local files.  Include saved branch code for the frontend-only viewer.
+        frontend_data = json.loads(json.dumps(portfolio, default=str))
+        for folder in frontend_data['folders']:
+            for file_data in folder['files']:
+                static_path = file_data.get('static_path')
+                code_path = os.path.join(self.docs_dir, static_path) if static_path else ''
+                try:
+                    with open(code_path, encoding='utf-8', errors='replace') as code_file:
+                        file_data['static_code'] = code_file.read()
+                except OSError:
+                    file_data['static_code'] = ''
+        script_path = os.path.join(self.docs_dir, 'portfolio_data.js')
+        with open(script_path, 'w', encoding='utf-8') as fp:
+            fp.write('window.PORTFOLIO_DATA = ')
+            json.dump(frontend_data, fp, ensure_ascii=False, default=str)
+            fp.write(';\n')
 
         return output_path
 
