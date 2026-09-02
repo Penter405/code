@@ -672,6 +672,7 @@
                     onkeyup="searchAnalyses(event)">
                 <select id="sortSelect" class="search-input" style="flex: 0 0 190px;" onchange="sortAnalyses()">
                     <option value="latest">Latest commit</option>
+                    <option value="updated">Latest folder update</option>
                     <option value="name">Folder name</option>
                     <option value="files">Most files</option>
                 </select>
@@ -712,6 +713,11 @@
             <div class="file-list" id="fileList" style="display: none;">
                 <div class="file-list-header">
                     <span id="fileCount">0 files changed</span>
+                    <select id="fileSortSelect" class="search-input" style="flex: 0 0 180px; padding: 5px 10px;" onchange="sortFiles()">
+                        <option value="time">Latest commit</option>
+                        <option value="name">File name</option>
+                        <option value="branch">Branch</option>
+                    </select>
                 </div>
                 <div id="fileItems"></div>
             </div>
@@ -949,6 +955,7 @@
             const sorted = [...allAnalyses].sort((a, b) => {
                 if (key === 'name') return a.folder_name.localeCompare(b.folder_name);
                 if (key === 'files') return b.total_files - a.total_files;
+                if (key === 'updated') return String(b.updated_at || '').localeCompare(String(a.updated_at || ''));
                 return String(b.latest_commit_time || '').localeCompare(String(a.latest_commit_time || ''));
             });
             renderAnalyses(sorted);
@@ -1002,7 +1009,7 @@
                         }
 
                         fileItems.insertAdjacentHTML('beforeend', `
-                            <div class="file-item" style="cursor:pointer;" onclick="viewFileCode(${f.id || 'null'}, '${f.raw_github_url}', '${f.github_url}', '${f.file_name}')">
+                            <div class="file-item" data-file-name="${f.file_name || ''}" data-branch="${f.branch || ''}" data-time="${f.commit_time || ''}" style="cursor:pointer;" onclick="viewFileCode(${f.id || 'null'}, '${f.raw_github_url}', '${f.github_url}', '${f.file_name}')">
                                 <div class="file-info">
                                     <svg class="file-icon" width="16" height="16" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M2 1.75C2 .784 2.784 0 3.75 0h8.5C13.216 0 14 .784 14 1.75v12.5A1.75 1.75 0 0112.25 16h-8.5A1.75 1.75 0 012 14.25V1.75zm1.75-.25a.25.25 0 00-.25.25v12.5c0 .138.112.25.25.25h8.5a.25.25 0 00.25-.25V1.75a.25.25 0 00-.25-.25h-8.5zM4 4h8v1H4V4zm0 3h8v1H4V7zm0 3h4v1H4v-1z"></path></svg>
                                     <span class="file-name">${f.file_location || f.file_name}</span>
@@ -1018,11 +1025,24 @@
 
                     loading.style.display = 'none';
                     fileList.style.display = 'block';
+                    sortFiles();
                 }
             } catch (e) {
                 console.error(e);
                 loading.style.display = 'none';
             }
+        }
+
+        function sortFiles() {
+            const list = document.getElementById('fileItems');
+            const key = document.getElementById('fileSortSelect').value;
+            const items = [...list.querySelectorAll('.file-item')];
+            items.sort((a, b) => {
+                if (key === 'name') return a.dataset.fileName.localeCompare(b.dataset.fileName);
+                if (key === 'branch') return a.dataset.branch.localeCompare(b.dataset.branch);
+                return b.dataset.time.localeCompare(a.dataset.time);
+            });
+            items.forEach(item => list.appendChild(item));
         }
 
         // Code Viewer
