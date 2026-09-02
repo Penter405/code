@@ -203,9 +203,10 @@ class PortfolioManager:
         """獲取變更文件列表"""
         self.log('section', 'Step 2: Scanning Changed Files')
 
-        # 獲取範圍內的提交
+        # Both selected commits are included: compare the parent of start to end.
+        # For a root commit, ``start^`` does not exist, so diff-tree is used.
         commits_out = self.run_git(
-            f"git log --format='%H|%ai|%s' {start}..{end}"
+            f"git log --format='%H|%ai|%s' {start}^..{end}"
         )
 
         # 如果用的是相同 commit，至少包含 end commit 自身
@@ -228,11 +229,13 @@ class PortfolioManager:
                         })
 
         # 獲取變更的文件列表
-        diff_output = self.run_git(f"git diff --name-only {start}..{end}")
+        diff_output = self.run_git(f"git diff --name-only {start}^..{end}")
+        if not diff_output:
+            diff_output = self.run_git(f"git diff-tree --no-commit-id --name-only -r {start}")
         if not diff_output and start != end:
             # 嘗試 log 方式
             diff_output = self.run_git(
-                f"git log --name-only --format='' {start}..{end}"
+                f"git log --name-only --format='' {start}^..{end}"
             )
 
         if not diff_output:
@@ -334,7 +337,7 @@ class PortfolioManager:
             print(f"\n  [{i}/{len(files)}] {Colors.CYAN}{file_path}{Colors.ENDC}")
 
             # 檢查重複
-            dup = self.db.check_duplicate(file_name, folder_id)
+            dup = self.db.check_duplicate(file_name, folder_id, branch)
             if dup:
                 print(f"    {Colors.YELLOW}[DUPLICATE] Already exists in this folder!{Colors.ENDC}")
                 print(f"    Existing: branch={dup['branch']}, commit={dup['commit_name'][:40]}")
@@ -461,7 +464,7 @@ class PortfolioManager:
 
     def _open_gui(self):
         """打開 tkinter GUI"""
-        gui = PortfolioGUI(self.db)
+        gui = PortfolioGUI(self.db, self)
         gui.run()
 
 
@@ -472,12 +475,13 @@ class PortfolioManager:
 class PortfolioGUI:
     """Portfolio 管理 GUI"""
 
-    def __init__(self, db: PortfolioDB):
+    def __init__(self, db: PortfolioDB, manager: PortfolioManager = None):
         self.db = db
+        self.manager = manager
         self.root = tk.Tk()
         self.root.title("Portfolio Manager")
-        self.root.geometry("1000x650")
-        self.root.minsize(800, 500)
+        self.root.geometry("1400x800")
+        self.root.minsize(1050, 650)
         self._configure_style()
         self._build_ui()
         self._refresh_folders()
@@ -563,6 +567,8 @@ class PortfolioGUI:
                    command=self._export_json).pack(side=tk.RIGHT, padx=2)
         ttk.Button(btn_frame, text="Refresh", style='Action.TButton',
                    command=self._refresh_all).pack(side=tk.RIGHT, padx=2)
+        ttk.Button(btn_frame, text="Add Branch Files", style='Action.TButton',
+                   command=self._open_branch_import).pack(side=tk.RIGHT, padx=2)
 
         # 主面板 (PanedWindow)
         paned = tk.PanedWindow(self.root, orient=tk.HORIZONTAL,
@@ -571,7 +577,7 @@ class PortfolioGUI:
 
         # ====== 左側：資料夾面板 ======
         left_frame = tk.Frame(paned, bg=self.bg_secondary)
-        paned.add(left_frame, width=300, minsize=200)
+        paned.add(left_frame, width=340, minsize=240)
 
         # 資料夾工具欄
         folder_toolbar = tk.Frame(left_frame, bg=self.bg_secondary)
@@ -601,9 +607,9 @@ class PortfolioGUI:
         self.folder_tree.pack(fill=tk.BOTH, expand=True, padx=4, pady=(0, 4))
         self.folder_tree.bind('<<TreeviewSelect>>', self._on_folder_select)
 
-        # ====== 右側：文件面板 ======
+        # ====== 中間：選中資料夾的子資料夾與文件 ======
         right_frame = tk.Frame(paned, bg=self.bg_secondary)
-        paned.add(right_frame, minsize=300)
+        paned.add(right_frame, minsize=450)
 
         # 文件工具欄
         file_toolbar = tk.Frame(right_frame, bg=self.bg_secondary)
@@ -629,10 +635,10 @@ class PortfolioGUI:
         self.file_tree.heading('path', text='File Path')
         self.file_tree.heading('commit', text='Commit')
         self.file_tree.heading('time', text='Time')
-        self.file_tree.column('branch', width=80, minwidth=60)
-        self.file_tree.column('path', width=200, minwidth=120)
-        self.file_tree.column('commit', width=200, minwidth=100)
-        self.file_tree.column('time', width=140, minwidth=100)
+        self.file_tree.column('branch', width=150, minwidth=100)
+        self.file_tree.column('path', width=460, minwidth=260)
+        self.file_tree.column('commit', width=360, minwidth=180)
+        self.file_tree.column('time', width=170, minwidth=130)
 
         # 滾動條
         file_scroll = ttk.Scrollbar(right_frame, orient=tk.VERTICAL,
@@ -641,6 +647,25 @@ class PortfolioGUI:
 
         self.file_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(4, 0), pady=(0, 4))
         file_scroll.pack(side=tk.RIGHT, fill=tk.Y, padx=(0, 4), pady=(0, 4))
+
+        # ====== 最右側：未保存的 branch import buffer ======
+        buffer_frame = tk.Frame(paned, bg=self.bg_secondary)
+        paned.add(buffer_frame, width=390, minsize=280)
+        buffer_toolbar = tk.Frame(buffer_frame, bg=self.bg_secondary)
+        buffer_toolbar.pack(fill=tk.X, padx=4, pady=4)
+        tk.Label(buffer_toolbar, text="Buffer (drag files to the middle)", fg=self.text, bg=self.bg_secondary,
+                 font=('Segoe UI', 11, 'bold')).pack(side=tk.LEFT, padx=4)
+        ttk.Button(buffer_toolbar, text="Save selected", style='Action.TButton',
+                   command=self._save_selected_buffer).pack(side=tk.RIGHT)
+        self.buffer_tree = ttk.Treeview(buffer_frame, columns=('branch', 'path'), show='headings', style='File.Treeview')
+        self.buffer_tree.heading('branch', text='Branch')
+        self.buffer_tree.heading('path', text='Unsaved file')
+        self.buffer_tree.column('branch', width=110, minwidth=80)
+        self.buffer_tree.column('path', width=260, minwidth=160)
+        self.buffer_tree.pack(fill=tk.BOTH, expand=True, padx=4, pady=(0, 4))
+        self.buffer_files = {}
+        self.buffer_tree.bind('<ButtonPress-1>', self._start_buffer_drag)
+        self.buffer_tree.bind('<ButtonRelease-1>', self._drop_buffer_file)
 
         # 底部狀態欄
         status_bar = tk.Frame(self.root, bg=self.bg_surface, height=24)
@@ -659,20 +684,36 @@ class PortfolioGUI:
         """刷新資料夾列表"""
         self.folder_tree.delete(*self.folder_tree.get_children())
         folders = self.db.get_all_folders()
-        for f in folders:
-            updated = f.get('last_file_update') or f.get('updated_at') or ''
-            if updated:
-                try:
-                    dt = datetime.fromisoformat(updated)
-                    updated = dt.strftime('%m/%d %H:%M')
-                except (ValueError, TypeError):
-                    updated = str(updated)[:10]
+        by_parent = {}
+        for folder in folders:
+            by_parent.setdefault(folder.get('parent_id'), []).append(folder)
 
-            self.folder_tree.insert('', tk.END, iid=str(f['id']),
-                                    text=f['name'],
-                                    values=(f.get('file_count', 0), updated))
+        def insert_children(parent_id, parent_item=''):
+            for f in sorted(by_parent.get(parent_id, []), key=lambda item: item['name'].lower()):
+                updated = f.get('last_file_update') or f.get('updated_at') or ''
+                if updated:
+                    updated = str(updated)[:16]
+                item = self.folder_tree.insert(parent_item, tk.END, iid=str(f['id']), text=f['name'],
+                                               values=(f.get('file_count', 0), updated), open=True)
+                insert_children(f['id'], item)
 
+        insert_children(None)
         self._set_status(f"{len(folders)} folders")
+
+    def _refresh_files(self, folder_id: int):
+        """Show direct child folders and files in the middle pane."""
+        self.file_tree.delete(*self.file_tree.get_children())
+        for child in self.db.get_child_folders(folder_id):
+            self.file_tree.insert('', tk.END, iid=f"folder-{child['id']}", values=(
+                'folder', f"📁 {child['name']}", '', ''))
+        files = self.db.get_files_in_folder(folder_id)
+        for f in files:
+            updated = f.get('last_file_update') or f.get('updated_at') or ''
+            commit_msg = (f['commit_name'] or '')[:50]
+            commit_time = str(f.get('commit_time') or '')[:16]
+            self.file_tree.insert('', tk.END, iid=str(f['id']), values=(
+                f['branch'], f['file_path'], commit_msg, commit_time))
+        self._set_status(f"{len(files)} files and {len(self.db.get_child_folders(folder_id))} child folders")
 
     def _refresh_all(self):
         """刷新全部"""
@@ -692,32 +733,14 @@ class PortfolioGUI:
             self.file_title.config(text=f"{folder['name']}")
             self._refresh_files(folder_id)
 
-    def _refresh_files(self, folder_id: int):
-        """刷新文件列表"""
-        self.file_tree.delete(*self.file_tree.get_children())
-        files = self.db.get_files_in_folder(folder_id)
-        for f in files:
-            commit_msg = (f['commit_name'] or '')[:50]
-            commit_time = ''
-            if f.get('commit_time'):
-                try:
-                    dt = datetime.fromisoformat(f['commit_time'].replace(' ', 'T').split('+')[0])
-                    commit_time = dt.strftime('%Y-%m-%d %H:%M')
-                except (ValueError, TypeError):
-                    commit_time = str(f['commit_time'])[:16]
-
-            self.file_tree.insert('', tk.END, iid=str(f['id']),
-                                  values=(f['branch'], f['file_path'],
-                                          commit_msg, commit_time))
-
-        self._set_status(f"{len(files)} files in folder")
-
     def _create_folder(self):
         """創建新資料夾"""
         name = simpledialog.askstring("Create Folder", "Folder name:",
                                       parent=self.root)
         if name and name.strip():
-            fid = self.db.create_folder(name.strip())
+            selected = self.folder_tree.selection()
+            parent_id = int(selected[0]) if selected else None
+            fid = self.db.create_folder(name.strip(), parent_id)
             if fid > 0:
                 self._refresh_folders()
                 self._set_status(f"Created folder: {name.strip()}")
@@ -780,6 +803,10 @@ class PortfolioGUI:
             messagebox.showinfo("Info", "Select a file first")
             return
 
+        if sel[0].startswith('folder-'):
+            messagebox.showinfo("Info", "Select a file, not a child folder.")
+            return
+
         file_id = int(sel[0])
         values = self.file_tree.item(sel[0], 'values')
         file_path = values[1] if values else 'unknown'
@@ -799,6 +826,10 @@ class PortfolioGUI:
         sel = self.file_tree.selection()
         if not sel:
             messagebox.showinfo("Info", "Select a file first")
+            return
+
+        if sel[0].startswith('folder-'):
+            messagebox.showinfo("Info", "Select a file, not a child folder.")
             return
 
         file_id = int(sel[0])
@@ -852,6 +883,277 @@ class PortfolioGUI:
 
         ttk.Button(move_win, text="Move", style='Action.TButton',
                    command=do_move).pack(pady=8)
+
+    # =========================================================================
+    # Branch import workflow (the GUI equivalent of the terminal workflow)
+    # =========================================================================
+
+    def _open_branch_import(self):
+        """Open an explicit, confirm-before-save branch import dialog."""
+        if not self.manager:
+            messagebox.showerror("Unavailable", "Branch import needs a repository manager.")
+            return
+
+        win = tk.Toplevel(self.root)
+        win.title("Add Files from a Branch")
+        win.geometry("900x650")
+        win.minsize(760, 520)
+        win.configure(bg=self.bg)
+        win.transient(self.root)
+        win.grab_set()
+
+        state = {'commits': [], 'files': []}
+        form = tk.Frame(win, bg=self.bg)
+        form.pack(fill=tk.X, padx=18, pady=16)
+
+        tk.Label(form, text="Branch", fg=self.text, bg=self.bg).grid(row=0, column=0, sticky='w', pady=5)
+        branch_var = tk.StringVar()
+        branch_box = ttk.Combobox(form, textvariable=branch_var, state='readonly', width=55)
+        branch_box.grid(row=0, column=1, sticky='ew', padx=(12, 0), pady=5)
+        form.columnconfigure(1, weight=1)
+
+        tk.Label(form, text="Start commit", fg=self.text, bg=self.bg).grid(row=1, column=0, sticky='w', pady=5)
+        start_var = tk.StringVar()
+        start_entry = tk.Entry(form, textvariable=start_var, bg=self.bg_secondary, fg=self.text,
+                               insertbackground=self.text, relief=tk.FLAT)
+        start_entry.grid(row=1, column=1, sticky='ew', padx=(12, 0), pady=5)
+
+        tk.Label(form, text="End commit", fg=self.text, bg=self.bg).grid(row=2, column=0, sticky='w', pady=5)
+        end_var = tk.StringVar()
+        end_entry = tk.Entry(form, textvariable=end_var, bg=self.bg_secondary, fg=self.text,
+                             insertbackground=self.text, relief=tk.FLAT)
+        end_entry.grid(row=2, column=1, sticky='ew', padx=(12, 0), pady=5)
+
+        hint = tk.Label(form, text="Select a branch. Empty commits will be confirmed before their branch defaults are used.",
+                        fg=self.text_secondary, bg=self.bg, anchor='w')
+        hint.grid(row=3, column=0, columnspan=2, sticky='ew', pady=(4, 0))
+
+        tk.Label(form, text="Scan adds files to the unsaved buffer. Drag each file to a folder in the middle pane.",
+                 fg=self.text_secondary, bg=self.bg, anchor='w').grid(row=4, column=0, columnspan=2, sticky='ew', pady=(14, 5))
+
+        preview = ttk.Treeview(win, columns=('path', 'commit', 'time'), show='headings', style='File.Treeview')
+        preview.heading('path', text='Files that will be imported after confirmation')
+        preview.heading('commit', text='Latest commit')
+        preview.heading('time', text='Commit time')
+        preview.column('path', width=460, minwidth=260)
+        preview.column('commit', width=270, minwidth=140)
+        preview.column('time', width=160, minwidth=110)
+        preview.pack(fill=tk.BOTH, expand=True, padx=18, pady=(12, 6))
+
+        button_row = tk.Frame(win, bg=self.bg)
+        button_row.pack(fill=tk.X, padx=18, pady=(4, 16))
+
+        def git_output(args):
+            result = subprocess.run(args, cwd=self.manager.repo_path, capture_output=True, text=True)
+            return result.stdout.strip() if result.returncode == 0 else ''
+
+        def branch_ref(branch):
+            """Use a local branch when present, otherwise its tracked origin ref."""
+            if git_output(['git', 'rev-parse', '--verify', f'{branch}^{{commit}}']):
+                return branch
+            return f'origin/{branch}'
+
+        def load_commits(*_):
+            branch = branch_var.get()
+            output = git_output(['git', 'log', branch_ref(branch), '--pretty=format:%H|%ai|%s', '--max-count=50'])
+            state['commits'] = []
+            for line in output.splitlines():
+                parts = line.split('|', 2)
+                if len(parts) == 3:
+                    state['commits'].append(parts)
+            if state['commits']:
+                # Display defaults in gray; do not save or scan until Scan is pressed.
+                start_entry.delete(0, tk.END)
+                end_entry.delete(0, tk.END)
+                start_entry.insert(0, state['commits'][-1][0])
+                end_entry.insert(0, state['commits'][0][0])
+                hint.config(text=f"{len(state['commits'])} commits loaded. Default: oldest → newest (HEAD).")
+            else:
+                hint.config(text="No commits found on this branch.")
+
+        def scan():
+            branch = branch_var.get()
+            if not branch:
+                messagebox.showinfo("Branch required", "Choose a branch first.", parent=win)
+                return
+            if not state['commits']:
+                load_commits()
+            if not state['commits']:
+                messagebox.showerror("No commits", f"No commits found on '{branch}'.", parent=win)
+                return
+
+            default_start, default_end = state['commits'][-1][0], state['commits'][0][0]
+            start, end = start_var.get().strip(), end_var.get().strip()
+            if not start or not end:
+                if not messagebox.askyesno("Use defaults?",
+                                           "A start or end commit is empty. Use the branch defaults (oldest → newest)?",
+                                           parent=win):
+                    return
+                start, end = start or default_start, end or default_end
+                start_var.set(start)
+                end_var.set(end)
+
+            if not git_output(['git', 'rev-parse', '--verify', f'{start}^{{commit}}']) or not git_output(['git', 'rev-parse', '--verify', f'{end}^{{commit}}']):
+                messagebox.showerror("Invalid commit", "Enter valid commit hashes for this repository.", parent=win)
+                return
+
+            state['files'] = self.manager.step_get_changed_files(branch, start, end)
+            preview.delete(*preview.get_children())
+            for index, file_data in enumerate(state['files']):
+                preview.insert('', tk.END, iid=str(index), values=(file_data['file_path'], file_data['commit_name'], file_data['commit_time']))
+            hint.config(text=f"Found {len(state['files'])} changed files. Add them to the buffer to choose destinations.")
+
+        def confirm_import():
+            if not state['files']:
+                messagebox.showinfo("Scan first", "Scan the selected commit range before confirming.", parent=win)
+                return
+            if not messagebox.askyesno("Confirm import",
+                                       f"Add {len(state['files'])} files from '{branch_var.get()}' to the unsaved buffer?",
+                                       parent=win):
+                return
+            self._add_to_buffer(state['files'], branch_var.get())
+            win.destroy()
+
+        ttk.Button(button_row, text="Cancel", style='Action.TButton', command=win.destroy).pack(side=tk.RIGHT)
+        ttk.Button(button_row, text="Confirm → Buffer", style='Action.TButton', command=confirm_import).pack(side=tk.RIGHT, padx=6)
+        ttk.Button(button_row, text="Scan files", style='Action.TButton', command=scan).pack(side=tk.LEFT)
+
+        branches = self._get_local_branches()
+        branch_box['values'] = branches
+        if branches:
+            current = git_output(['git', 'branch', '--show-current'])
+            branch_var.set(current if current in branches else branches[0])
+            load_commits()
+        else:
+            hint.config(text="No local or tracked remote branches are available.")
+        branch_box.bind('<<ComboboxSelected>>', load_commits)
+
+    def _get_local_branches(self) -> List[str]:
+        """List existing refs without fetching or changing repository state."""
+        if not self.manager:
+            return []
+        result = subprocess.run(['git', 'branch', '-a', '--format=%(refname:short)'], cwd=self.manager.repo_path,
+                                capture_output=True, text=True)
+        branches = set()
+        for name in result.stdout.splitlines():
+            name = name.strip()
+            if name.startswith('origin/'):
+                name = name[7:]
+            if name and name != 'HEAD':
+                branches.add(name)
+        return sorted(branches)
+
+    def _show_import_preview(self, files: List[Dict]):
+        """Keep the scanned files visible in the enlarged right-most panel."""
+        self.file_tree.delete(*self.file_tree.get_children())
+        self.file_title.config(text=f"Import preview — {len(files)} files (not saved yet)")
+        for index, file_data in enumerate(files):
+            self.file_tree.insert('', tk.END, iid=f"preview-{index}", values=(
+                '', file_data['file_path'], file_data['commit_name'][:50], file_data['commit_time']))
+
+    def _add_to_buffer(self, files: List[Dict], branch: str):
+        """Stage scanned files only; this intentionally does not write files or DB rows."""
+        for file_data in files:
+            key = f"buffer-{len(self.buffer_files)}"
+            self.buffer_files[key] = {**file_data, 'branch': branch}
+            self.buffer_tree.insert('', tk.END, iid=key, values=(branch, file_data['file_path']))
+        self._set_status(f"{len(files)} files added to buffer; drag them to a destination folder")
+
+    def _start_buffer_drag(self, event):
+        self._drag_buffer_item = self.buffer_tree.identify_row(event.y)
+        if self._drag_buffer_item:
+            # Keep receiving the release event even after the pointer leaves
+            # the buffer tree.  This is required for click-hold-drag in Tk.
+            self.buffer_tree.grab_set()
+            self._set_status("Dragging buffer file — release over a child folder in the middle pane")
+
+    def _drop_buffer_file(self, event):
+        item = getattr(self, '_drag_buffer_item', '')
+        try:
+            if not item or item not in self.buffer_files:
+                return
+            # Dropping on a child-folder row targets it; otherwise use the
+            # selected left folder when the release is anywhere in the middle.
+            destination = None
+            widget = self.root.winfo_containing(event.x_root, event.y_root)
+            in_middle = widget == self.file_tree or str(widget).startswith(str(self.file_tree))
+            if in_middle:
+                tree_y = event.y_root - self.file_tree.winfo_rooty()
+                target = self.file_tree.identify_row(tree_y)
+                if target.startswith('folder-'):
+                    destination = int(target.split('-', 1)[1])
+                else:
+                    selected = self.folder_tree.selection()
+                    destination = int(selected[0]) if selected else None
+            if destination is None:
+                self._set_status("Drop in the middle pane after selecting a destination folder on the left")
+                return
+            self._save_buffer_item(item, destination)
+        finally:
+            self._drag_buffer_item = ''
+            # ``grab_release`` is safe if another widget already released it.
+            try:
+                self.buffer_tree.grab_release()
+            except tk.TclError:
+                pass
+
+    def _save_selected_buffer(self):
+        selected = self.buffer_tree.selection()
+        folders = self.folder_tree.selection()
+        if not selected or not folders:
+            messagebox.showinfo("Select file and folder", "Select a buffer file and a destination folder on the left.")
+            return
+        self._save_buffer_item(selected[0], int(folders[0]))
+
+    def _save_buffer_item(self, item: str, folder_id: int):
+        file_data = self.buffer_files.get(item)
+        if not file_data:
+            return
+        folder = self.db.get_folder_by_id(folder_id)
+        if not folder or not messagebox.askyesno(
+                "Save file", f"Save {file_data['file_path']} into '{folder['name']}'?\n\n"
+                "This is the point where the database and docs/branch copy are written."):
+            return
+        saved, updated, skipped = self._save_imported_files([file_data], folder_id, file_data['branch'], self.root)
+        if saved or updated:
+            self.buffer_tree.delete(item)
+            self.buffer_files.pop(item, None)
+            self.db.export_portfolio_json()
+            self._refresh_folders()
+            self.folder_tree.selection_set(str(folder_id))
+            self._on_folder_select(None)
+        self._set_status(f"Saved {saved}, updated {updated}, skipped {skipped}")
+
+    def _save_imported_files(self, files: List[Dict], folder_id: int, branch: str, parent) -> Tuple[int, int, int]:
+        """Save files using the same duplicate/update choices as the terminal flow."""
+        saved = updated = skipped = 0
+        for file_data in files:
+            file_name, file_path = file_data['file_name'], file_data['file_path']
+            github_url = PortfolioDB.generate_github_url(file_path, branch)
+            raw_url = PortfolioDB.generate_raw_github_url(file_path, branch)
+            duplicate = self.db.check_duplicate(file_name, folder_id, branch)
+            if duplicate:
+                update = messagebox.askyesno(
+                    "Duplicate file", f"{file_path} already exists in this folder (from {duplicate['branch']}).\n\nUpdate it?",
+                    parent=parent)
+                if not update:
+                    skipped += 1
+                    continue
+                self.db.update_file(duplicate['id'], file_data['commit_time'], file_data['commit_name'],
+                                    github_url, raw_url, branch, file_path)
+                file_id = duplicate['id']
+                updated += 1
+            else:
+                file_id, is_new = self.db.add_file(file_name, folder_id, file_data['commit_time'],
+                                                   file_data['commit_name'], github_url, raw_url, branch, file_path)
+                if not is_new:
+                    skipped += 1
+                    continue
+                saved += 1
+            code = self.db.fetch_code_from_branch(branch, file_path, self.manager.repo_path)
+            if code is not None:
+                self.db.save_static_code(file_id, code)
+        return saved, updated, skipped
 
     # =========================================================================
     # 工具

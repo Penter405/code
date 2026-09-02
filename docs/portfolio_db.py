@@ -52,10 +52,17 @@ class PortfolioDB:
             CREATE TABLE IF NOT EXISTS folders (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT UNIQUE NOT NULL,
+                parent_id INTEGER,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (parent_id) REFERENCES folders(id) ON DELETE CASCADE
             )
         ''')
+
+        # Existing databases did not have nested folders.
+        cursor.execute('PRAGMA table_info(folders)')
+        if 'parent_id' not in [column[1] for column in cursor.fetchall()]:
+            cursor.execute('ALTER TABLE folders ADD COLUMN parent_id INTEGER')
 
         # 文件表
         cursor.execute('''
@@ -76,29 +83,81 @@ class PortfolioDB:
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE CASCADE,
-                UNIQUE(file_name, folder_id)
+                UNIQUE(file_name, folder_id, branch)
             )
         ''')
+
+        self._migrate_file_branch_uniqueness(cursor)
 
         # 索引
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_files_folder ON files(folder_id)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_files_name ON files(file_name)')
         cursor.execute('CREATE INDEX IF NOT EXISTS idx_folders_name ON folders(name)')
+        cursor.execute('CREATE INDEX IF NOT EXISTS idx_folders_parent ON folders(parent_id)')
 
         conn.commit()
+
+    def _migrate_file_branch_uniqueness(self, cursor):
+        """Upgrade databases created before branch was part of file identity."""
+        cursor.execute('PRAGMA index_list(files)')
+        has_old_unique_index = False
+        for index in cursor.fetchall():
+            # PRAGMA index_list: seq, name, unique, origin, partial
+            if not index[2]:
+                continue
+            cursor.execute(f'PRAGMA index_info("{index[1]}")')
+            columns = [item[2] for item in cursor.fetchall()]
+            if columns == ['file_name', 'folder_id']:
+                has_old_unique_index = True
+                break
+        if not has_old_unique_index:
+            return
+
+        # SQLite cannot alter a UNIQUE constraint in place.  Copy every column
+        # so existing saved files and their static paths remain intact.
+        cursor.execute('ALTER TABLE files RENAME TO files_old_branch_unique')
+        # These index names remain reserved by the renamed table until it is
+        # dropped; release them so _init_database can recreate them below.
+        cursor.execute('DROP INDEX IF EXISTS idx_files_folder')
+        cursor.execute('DROP INDEX IF EXISTS idx_files_name')
+        cursor.execute('''
+            CREATE TABLE files (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                file_name TEXT NOT NULL, display_name TEXT, folder_id INTEGER NOT NULL,
+                commit_time TEXT NOT NULL, commit_name TEXT NOT NULL,
+                github_url TEXT NOT NULL, raw_github_url TEXT NOT NULL,
+                branch TEXT NOT NULL, repo TEXT NOT NULL DEFAULT 'Penter405/code',
+                file_path TEXT NOT NULL, language TEXT, static_path TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (folder_id) REFERENCES folders(id) ON DELETE CASCADE,
+                UNIQUE(file_name, folder_id, branch)
+            )
+        ''')
+        cursor.execute('''
+            INSERT INTO files
+            (id, file_name, display_name, folder_id, commit_time, commit_name,
+             github_url, raw_github_url, branch, repo, file_path, language,
+             static_path, created_at, updated_at)
+            SELECT id, file_name, display_name, folder_id, commit_time, commit_name,
+                   github_url, raw_github_url, branch, repo, file_path, language,
+                   static_path, created_at, updated_at
+            FROM files_old_branch_unique
+        ''')
+        cursor.execute('DROP TABLE files_old_branch_unique')
 
     # =========================================================================
     # 資料夾操作
     # =========================================================================
 
-    def create_folder(self, name: str) -> int:
+    def create_folder(self, name: str, parent_id: int = None) -> int:
         """創建資料夾，返回 ID"""
         conn = self._connect()
         cursor = conn.cursor()
         try:
             cursor.execute(
-                'INSERT INTO folders (name) VALUES (?)',
-                (name,)
+                'INSERT INTO folders (name, parent_id) VALUES (?, ?)',
+                (name, parent_id)
             )
             conn.commit()
             return cursor.lastrowid
@@ -135,6 +194,10 @@ class PortfolioDB:
             cursor.execute('SELECT COUNT(*) as cnt FROM files WHERE folder_id = ?', (folder_id,))
             if cursor.fetchone()['cnt'] > 0:
                 return False  # 資料夾非空
+
+        # Delete descendants first; old databases may not have the FK cascade.
+        for child in self.get_child_folders(folder_id):
+            self.delete_folder(child['id'], delete_files=True)
 
         # 刪除相關靜態代碼文件
         files = self.get_files_in_folder(folder_id)
@@ -180,6 +243,15 @@ class PortfolioDB:
         row = cursor.fetchone()
         return dict(row) if row else None
 
+    def get_child_folders(self, parent_id: Optional[int]) -> List[Dict]:
+        """Return direct child folders, ordered by name."""
+        cursor = self._connect().cursor()
+        if parent_id is None:
+            cursor.execute('SELECT * FROM folders WHERE parent_id IS NULL ORDER BY name COLLATE NOCASE')
+        else:
+            cursor.execute('SELECT * FROM folders WHERE parent_id = ? ORDER BY name COLLATE NOCASE', (parent_id,))
+        return [dict(row) for row in cursor.fetchall()]
+
     # =========================================================================
     # 文件操作
     # =========================================================================
@@ -197,8 +269,8 @@ class PortfolioDB:
 
         # 檢查重複
         cursor.execute(
-            'SELECT id FROM files WHERE file_name = ? AND folder_id = ?',
-            (file_name, folder_id)
+            'SELECT id FROM files WHERE file_name = ? AND folder_id = ? AND branch = ?',
+            (file_name, folder_id, branch)
         )
         existing = cursor.fetchone()
 
@@ -210,7 +282,7 @@ class PortfolioDB:
             language = self._detect_language(file_name)
 
         # 生成靜態路徑
-        static_path = self._generate_static_path(language, file_path)
+        static_path = self._generate_static_path(branch, file_path)
 
         cursor.execute('''
             INSERT INTO files 
@@ -245,7 +317,7 @@ class PortfolioDB:
                 os.remove(full_path)
 
         language = self._detect_language(file_path)
-        static_path = self._generate_static_path(language, file_path)
+        static_path = self._generate_static_path(branch, file_path)
 
         cursor.execute('''
             UPDATE files SET
@@ -359,14 +431,17 @@ class PortfolioDB:
         ''', (f'%{query}%', f'%{query}%', f'%{query}%'))
         return [dict(row) for row in cursor.fetchall()]
 
-    def check_duplicate(self, file_name: str, folder_id: int) -> Optional[Dict]:
-        """檢查是否有重複文件"""
+    def check_duplicate(self, file_name: str, folder_id: int,
+                        branch: str = None) -> Optional[Dict]:
+        """Check duplicates within a folder; branch is part of file identity."""
         conn = self._connect()
         cursor = conn.cursor()
-        cursor.execute(
-            'SELECT * FROM files WHERE file_name = ? AND folder_id = ?',
-            (file_name, folder_id)
-        )
+        if branch is None:
+            cursor.execute('SELECT * FROM files WHERE file_name = ? AND folder_id = ?',
+                           (file_name, folder_id))
+        else:
+            cursor.execute('SELECT * FROM files WHERE file_name = ? AND folder_id = ? AND branch = ?',
+                           (file_name, folder_id, branch))
         row = cursor.fetchone()
         return dict(row) if row else None
 
@@ -504,11 +579,17 @@ class PortfolioDB:
         }
         return lang_map.get(ext, 'other')
 
-    def _generate_static_path(self, language: str, file_path: str) -> str:
-        """生成靜態代碼的存儲路徑 (相對於 docs/)"""
-        # codes/<language>/<original_path>
-        # e.g. codes/python/leetcode/210.py
-        return f"codes/{language}/{file_path}"
+    def _generate_static_path(self, branch: str, file_path: str) -> str:
+        """Generate an explicit branch-specific copy path relative to ``docs/``.
+
+        A file is copied only when the user confirms an import.  Keeping the
+        branch in the path prevents ``feature-x/foo.py`` from replacing the
+        saved copy of ``main/foo.py``.
+        """
+        safe_branch = branch.replace('\\', '/').strip('/').replace('/', '__')
+        safe_branch = safe_branch or 'unknown-branch'
+        clean_path = file_path.replace('\\', '/').lstrip('/')
+        return f"branch/{safe_branch}/{clean_path}"
 
     @staticmethod
     def generate_github_url(file_path: str, branch: str = "main",
