@@ -46,6 +46,7 @@ def get_analyses():
     try:
         records = []
         for folder in portfolio_db.get_all_folders():
+            files = portfolio_db.get_files_in_folder(folder['id'])
             records.append({
                 'analysis_id': f"folder-{folder['id']}",
                 'repo_owner': 'Penter405', 'repo_name': 'code',
@@ -53,7 +54,8 @@ def get_analyses():
                 'start_commit': '0000000', 'end_commit': '0000000',
                 'total_files': folder.get('file_count', 0),
                 'created_at': folder.get('created_at', ''),
-                'folder_name': folder['name'], 'parent_id': folder.get('parent_id')
+                'folder_name': folder['name'], 'parent_id': folder.get('parent_id'),
+                'static_files': files,
             })
         return jsonify({
             'success': True,
