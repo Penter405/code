@@ -402,12 +402,34 @@
             justify-content: space-between;
         }
 
+        .file-column-header, .file-item {
+            display: grid;
+            grid-template-columns: minmax(240px, 1fr) 150px 180px 110px;
+            align-items: center;
+            column-gap: 16px;
+        }
+
+        .file-column-header {
+            background: #20252d;
+            border-bottom: 1px solid var(--border-default);
+            padding: 7px 20px;
+        }
+
+        .file-sort-button {
+            border: 0;
+            background: transparent;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 3px 6px;
+            text-align: left;
+            font-size: 0.82rem;
+        }
+
+        .file-sort-button:hover, .file-sort-button.active { color: var(--text-primary); background: var(--card-hover); }
+
         .file-item {
             padding: 16px 20px;
             border-bottom: 1px solid var(--border-muted);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
             transition: background 0.2s ease;
         }
 
@@ -441,6 +463,12 @@
             gap: 12px;
             font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
             font-size: 0.85rem;
+        }
+
+        @media (max-width: 760px) {
+            .file-column-header, .file-item { grid-template-columns: minmax(180px, 1fr) 120px; }
+            .file-column-header > :nth-child(3), .file-column-header > :nth-child(4),
+            .file-item > :nth-child(3), .file-item > :nth-child(4) { display: none; }
         }
 
         .diff-blocks {
@@ -712,12 +740,13 @@
 
             <div class="file-list" id="fileList" style="display: none;">
                 <div class="file-list-header">
-                    <span id="fileCount">0 files changed</span>
-                    <select id="fileSortSelect" class="search-input" style="flex: 0 0 180px; padding: 5px 10px;" onchange="sortFiles()">
-                        <option value="time">Latest commit</option>
-                        <option value="name">File name</option>
-                        <option value="branch">Branch</option>
-                    </select>
+                    <span id="fileCount">0 saved files</span>
+                </div>
+                <div class="file-column-header">
+                    <button class="file-sort-button" data-sort="name" onclick="sortFilesBy('name')">Name</button>
+                    <button class="file-sort-button" data-sort="branch" onclick="sortFilesBy('branch')">Branch</button>
+                    <button class="file-sort-button active" data-sort="time" onclick="sortFilesBy('time')">Date modified ↓</button>
+                    <button class="file-sort-button" data-sort="type" onclick="sortFilesBy('type')">Type</button>
                 </div>
                 <div id="fileItems"></div>
             </div>
@@ -1009,23 +1038,21 @@
                         }
 
                         fileItems.insertAdjacentHTML('beforeend', `
-                            <div class="file-item" data-file-name="${f.file_name || ''}" data-branch="${f.branch || ''}" data-time="${f.commit_time || ''}" style="cursor:pointer;" onclick="viewFileCode(${f.id || 'null'}, '${f.raw_github_url}', '${f.github_url}', '${f.file_name}')">
+                            <div class="file-item" data-file-name="${f.file_name || ''}" data-branch="${f.branch || ''}" data-time="${f.commit_time || ''}" data-type="${(f.file_name || '').split('.').pop() || ''}" style="cursor:pointer;" onclick="viewFileCode(${f.id || 'null'}, '${f.raw_github_url}', '${f.github_url}', '${f.file_name}')">
                                 <div class="file-info">
                                     <svg class="file-icon" width="16" height="16" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M2 1.75C2 .784 2.784 0 3.75 0h8.5C13.216 0 14 .784 14 1.75v12.5A1.75 1.75 0 0112.25 16h-8.5A1.75 1.75 0 012 14.25V1.75zm1.75-.25a.25.25 0 00-.25.25v12.5c0 .138.112.25.25.25h8.5a.25.25 0 00.25-.25V1.75a.25.25 0 00-.25-.25h-8.5zM4 4h8v1H4V4zm0 3h8v1H4V7zm0 3h4v1H4v-1z"></path></svg>
                                     <span class="file-name">${f.file_location || f.file_name}</span>
                                 </div>
-                                <div class="file-diff-bar">
-                                    <span class="stat-added">${f.branch || '—'}</span>
-                                    <span class="stat-removed">${String(f.commit_time || '').slice(0, 16)}</span>
-                                    <div class="diff-blocks">${blocks}</div>
-                                </div>
+                                <span class="stat-added">${f.branch || '—'}</span>
+                                <span class="stat-removed">${String(f.commit_time || '').slice(0, 16)}</span>
+                                <span class="file-diff-bar">${(f.file_name || '').includes('.') ? f.file_name.split('.').pop().toUpperCase() + ' file' : 'File'}</span>
                             </div>
                         `);
                     });
 
                     loading.style.display = 'none';
                     fileList.style.display = 'block';
-                    sortFiles();
+                    sortFilesBy('time', true);
                 }
             } catch (e) {
                 console.error(e);
@@ -1033,16 +1060,24 @@
             }
         }
 
-        function sortFiles() {
+        let fileSort = { key: 'time', ascending: false };
+
+        function sortFilesBy(key, initial = false) {
+            if (!initial) fileSort.ascending = fileSort.key === key ? !fileSort.ascending : key !== 'time';
+            fileSort.key = key;
             const list = document.getElementById('fileItems');
-            const key = document.getElementById('fileSortSelect').value;
             const items = [...list.querySelectorAll('.file-item')];
             items.sort((a, b) => {
-                if (key === 'name') return a.dataset.fileName.localeCompare(b.dataset.fileName);
-                if (key === 'branch') return a.dataset.branch.localeCompare(b.dataset.branch);
-                return b.dataset.time.localeCompare(a.dataset.time);
+                const fields = { name: 'fileName', branch: 'branch', time: 'time', type: 'type' };
+                const result = String(a.dataset[fields[key]]).localeCompare(String(b.dataset[fields[key]]));
+                return fileSort.ascending ? result : -result;
             });
             items.forEach(item => list.appendChild(item));
+            document.querySelectorAll('.file-sort-button').forEach(button => {
+                const active = button.dataset.sort === key;
+                button.classList.toggle('active', active);
+                button.textContent = button.textContent.replace(/ [↑↓]$/, '') + (active ? (fileSort.ascending ? ' ↑' : ' ↓') : '');
+            });
         }
 
         // Code Viewer
