@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,9 +8,10 @@
     <!-- Use Inter font for a modern look -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Highlight.js for code syntax highlighting -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-dark.min.css">
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
-    
+
     <style>
         :root {
             /* Premium Dark Mode Colors based on GitHub Dark but more modern */
@@ -26,11 +28,11 @@
             --danger-color: #f85149;
             --card-bg: #161b22;
             --card-hover: #1f242c;
-            
+
             /* Gradients & Shadows for premium feel */
             --gradient-accent: linear-gradient(135deg, #58a6ff 0%, #3182ce 100%);
-            --shadow-float: 0 8px 24px rgba(0,0,0,0.4);
-            --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+            --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.4);
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
         }
 
         * {
@@ -112,7 +114,7 @@
             color: var(--accent-primary);
             text-decoration: none;
         }
-        
+
         .repo-title .owner:hover {
             text-decoration: underline;
         }
@@ -122,7 +124,7 @@
             font-weight: 600;
             text-decoration: none;
         }
-        
+
         .repo-title .repo:hover {
             text-decoration: underline;
         }
@@ -167,7 +169,8 @@
 
         .nav-tab.active {
             font-weight: 600;
-            border-bottom-color: #f78166; /* GitHub-like active tab accent */
+            border-bottom-color: #f78166;
+            /* GitHub-like active tab accent */
         }
 
         .nav-tab.active svg {
@@ -192,8 +195,15 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         /* Search Bar */
@@ -256,7 +266,7 @@
             position: relative;
             padding-left: 20px;
         }
-        
+
         .timeline::before {
             content: '';
             position: absolute;
@@ -350,8 +360,13 @@
             font-size: 0.85rem;
         }
 
-        .stat-added { color: var(--success-color); }
-        .stat-removed { color: var(--danger-color); }
+        .stat-added {
+            color: var(--success-color);
+        }
+
+        .stat-removed {
+            color: var(--danger-color);
+        }
 
         /* Detail View (Files) */
         .back-link {
@@ -364,7 +379,7 @@
             font-weight: 500;
             transition: opacity 0.2s;
         }
-        
+
         .back-link:hover {
             opacity: 0.8;
             text-decoration: underline;
@@ -439,9 +454,18 @@
             border-radius: 1px;
             background: var(--border-default);
         }
-        .diff-block.add { background: var(--success-color); }
-        .diff-block.del { background: var(--danger-color); }
-        .diff-block.neu { background: var(--border-default); }
+
+        .diff-block.add {
+            background: var(--success-color);
+        }
+
+        .diff-block.del {
+            background: var(--danger-color);
+        }
+
+        .diff-block.neu {
+            background: var(--border-default);
+        }
 
         /* Code Viewer Modal */
         .modal-overlay {
@@ -541,7 +565,9 @@
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         .empty-state {
@@ -557,21 +583,41 @@
 
         /* Responsive */
         @media (max-width: 768px) {
-            .repo-title { font-size: 1.2rem; }
-            .chapter-meta { flex-direction: column; gap: 8px; }
-            .modal-content { width: 100vw; height: 100vh; border-radius: 0; }
-            .modal-header { border-radius: 0; }
-            .modal-body { border-radius: 0; }
+            .repo-title {
+                font-size: 1.2rem;
+            }
+
+            .chapter-meta {
+                flex-direction: column;
+                gap: 8px;
+            }
+
+            .modal-content {
+                width: 100vw;
+                height: 100vh;
+                border-radius: 0;
+            }
+
+            .modal-header {
+                border-radius: 0;
+            }
+
+            .modal-body {
+                border-radius: 0;
+            }
         }
     </style>
 </head>
+
 <body>
 
     <!-- Global Header -->
     <header>
         <a href="#" class="header-logo" onclick="location.reload()">
             <svg viewBox="0 0 16 16" version="1.1" aria-hidden="true">
-                <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path>
+                <path fill-rule="evenodd"
+                    d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z">
+                </path>
             </svg>
             <span>Code Explorer</span>
         </a>
@@ -585,7 +631,9 @@
         <div class="container" style="padding-top: 0; padding-bottom: 0;">
             <div class="repo-title">
                 <svg width="16" height="16" viewBox="0 0 16 16" version="1.1">
-                    <path fill-rule="evenodd" d="M2 2.5A2.5 2.5 0 014.5 0h8.75a.75.75 0 01.75.75v12.5a.75.75 0 01-.75.75h-2.5a.75.75 0 110-1.5h1.75v-2h-8a1 1 0 00-.714 1.7.75.75 0 01-1.072 1.05A2.495 2.495 0 012 11.5v-9zm10.5-1V9h-8c-.356 0-.694.074-1 .208V2.5a1 1 0 011-1h8zM5 12.25v3.25a.25.25 0 00.4.2l1.45-1.087a.25.25 0 01.3 0L8.6 15.7a.25.25 0 00.4-.2v-3.25a.25.25 0 00-.25-.25h-3.5a.25.25 0 00-.25.25z"></path>
+                    <path fill-rule="evenodd"
+                        d="M2 2.5A2.5 2.5 0 014.5 0h8.75a.75.75 0 01.75.75v12.5a.75.75 0 01-.75.75h-2.5a.75.75 0 110-1.5h1.75v-2h-8a1 1 0 00-.714 1.7.75.75 0 01-1.072 1.05A2.495 2.495 0 012 11.5v-9zm10.5-1V9h-8c-.356 0-.694.074-1 .208V2.5a1 1 0 011-1h8zM5 12.25v3.25a.25.25 0 00.4.2l1.45-1.087a.25.25 0 01.3 0L8.6 15.7a.25.25 0 00.4-.2v-3.25a.25.25 0 00-.25-.25h-3.5a.25.25 0 00-.25.25z">
+                    </path>
                 </svg>
                 <a href="#" class="owner" id="repoOwner">Owner</a>
                 <span>/</span>
@@ -595,11 +643,19 @@
 
             <div class="nav-tabs">
                 <a class="nav-tab active" onclick="switchTab('chapters', this)">
-                    <svg width="16" height="16" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M10.5 7.75a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0zm1.43.75a4.002 4.002 0 01-7.86 0H.75a.75.75 0 110-1.5h3.32a4.001 4.001 0 017.86 0h3.32a.75.75 0 110 1.5h-3.32z"></path></svg>
+                    <svg width="16" height="16" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd"
+                            d="M10.5 7.75a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0zm1.43.75a4.002 4.002 0 01-7.86 0H.75a.75.75 0 110-1.5h3.32a4.001 4.001 0 017.86 0h3.32a.75.75 0 110 1.5h-3.32z">
+                        </path>
+                    </svg>
                     Chapters (Analyses)
                 </a>
                 <a class="nav-tab" onclick="switchTab('about', this)">
-                    <svg width="16" height="16" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M0 8a8 8 0 1116 0A8 8 0 010 8zm8-6.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM6.5 7.75A.75.75 0 017.25 7h1a.75.75 0 01.75.75v2.75h.25a.75.75 0 010 1.5h-2a.75.75 0 010-1.5h.25v-2h-.25a.75.75 0 01-.75-.75zM8 6a1 1 0 100-2 1 1 0 000 2z"></path></svg>
+                    <svg width="16" height="16" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd"
+                            d="M0 8a8 8 0 1116 0A8 8 0 010 8zm8-6.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM6.5 7.75A.75.75 0 017.25 7h1a.75.75 0 01.75.75v2.75h.25a.75.75 0 010 1.5h-2a.75.75 0 010-1.5h.25v-2h-.25a.75.75 0 01-.75-.75zM8 6a1 1 0 100-2 1 1 0 000 2z">
+                        </path>
+                    </svg>
                     About
                 </a>
             </div>
@@ -608,22 +664,27 @@
 
     <!-- Main Content -->
     <main class="container">
-        
+
         <!-- Chapters (Analyses) View -->
         <div id="chapters" class="tab-content active">
             <div class="search-container">
-                <input type="text" id="searchInput" class="search-input" placeholder="Find a chapter or analysis run..." onkeyup="searchAnalyses(event)">
+                <input type="text" id="searchInput" class="search-input" placeholder="Find a chapter or analysis run..."
+                    onkeyup="searchAnalyses(event)">
                 <button class="btn" onclick="searchAnalyses(null, true)">Clear</button>
             </div>
 
             <div id="loading" class="spinner"></div>
-            
+
             <div id="chaptersList" class="timeline" style="display: none;">
                 <!-- Filled via JS -->
             </div>
-            
+
             <div id="noData" class="empty-state" style="display: none;">
-                <svg width="48" height="48" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M11 2H9c0-.55-.45-1-1-1H5c-.55 0-1 .45-1 1H2c-.55 0-1 .45-1 1v1h14V3c0-.55-.45-1-1-1zM6 2h2v1H6V2zm-4 3v9c0 .55.45 1 1 1h10c.55 0 1-.45 1-1V5H2z"></path></svg>
+                <svg width="48" height="48" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd"
+                        d="M11 2H9c0-.55-.45-1-1-1H5c-.55 0-1 .45-1 1H2c-.55 0-1 .45-1 1v1h14V3c0-.55-.45-1-1-1zM6 2h2v1H6V2zm-4 3v9c0 .55.45 1 1 1h10c.55 0 1-.45 1-1V5H2z">
+                    </path>
+                </svg>
                 <h3>No analysis chapters found</h3>
                 <p style="margin-top: 8px;">Run main.py locally to generate analysis data.</p>
             </div>
@@ -632,13 +693,17 @@
         <!-- Files Detail View -->
         <div id="chapterDetail" class="tab-content">
             <a class="back-link" onclick="backToChapters()">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M7.78 12.53a.75.75 0 01-1.06 0L2.47 8.28a.75.75 0 010-1.06l4.25-4.25a.75.75 0 011.06 1.06L4.81 7.5h7.44a.75.75 0 010 1.5H4.81l2.97 2.97a.75.75 0 010 1.06z"></path></svg>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path fill-rule="evenodd"
+                        d="M7.78 12.53a.75.75 0 01-1.06 0L2.47 8.28a.75.75 0 010-1.06l4.25-4.25a.75.75 0 011.06 1.06L4.81 7.5h7.44a.75.75 0 010 1.5H4.81l2.97 2.97a.75.75 0 010 1.06z">
+                    </path>
+                </svg>
                 Back to Chapters
             </a>
-            
+
             <div id="detailHeader" style="margin-bottom: 24px;"></div>
             <div id="detailLoading" class="spinner" style="display: none;"></div>
-            
+
             <div class="file-list" id="fileList" style="display: none;">
                 <div class="file-list-header">
                     <span id="fileCount">0 files changed</span>
@@ -650,21 +715,31 @@
         <!-- About View -->
         <div id="about" class="tab-content">
             <div class="chapter-card" style="padding: 40px; text-align: center;">
-                <svg width="64" height="64" viewBox="0 0 16 16" style="fill: var(--text-secondary); margin-bottom: 24px;"><path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
+                <svg width="64" height="64" viewBox="0 0 16 16"
+                    style="fill: var(--text-secondary); margin-bottom: 24px;">
+                    <path fill-rule="evenodd"
+                        d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z">
+                    </path>
+                </svg>
                 <h2 style="margin-bottom: 16px; color: var(--text-primary);">Penter's Code Explorer</h2>
                 <p style="color: var(--text-secondary); max-width: 600px; margin: 0 auto 32px auto; line-height: 1.6;">
-                    A sleek, GitHub-inspired web interface to browse through code changes, chapters, and analysis runs generated by the local analysis tool. 
+                    A sleek, GitHub-inspired web interface to browse through code changes, chapters, and analysis runs
+                    generated by the local analysis tool.
                     Built to make code reviews and historical tracking beautiful and seamless.
                 </p>
-                
+
                 <div style="display: flex; gap: 24px; justify-content: center;">
-                    <div style="background: var(--bg-canvas-inset); padding: 16px; border-radius: 8px; border: 1px solid var(--border-default); text-align: left; width: 250px;">
+                    <div
+                        style="background: var(--bg-canvas-inset); padding: 16px; border-radius: 8px; border: 1px solid var(--border-default); text-align: left; width: 250px;">
                         <h4 style="color: var(--accent-primary); margin-bottom: 8px;">Backend</h4>
-                        <p style="font-size: 0.9rem; color: var(--text-secondary);">Flask REST API<br>SQLite Database</p>
+                        <p style="font-size: 0.9rem; color: var(--text-secondary);">Flask REST API<br>SQLite Database
+                        </p>
                     </div>
-                    <div style="background: var(--bg-canvas-inset); padding: 16px; border-radius: 8px; border: 1px solid var(--border-default); text-align: left; width: 250px;">
+                    <div
+                        style="background: var(--bg-canvas-inset); padding: 16px; border-radius: 8px; border: 1px solid var(--border-default); text-align: left; width: 250px;">
                         <h4 style="color: var(--success-color); margin-bottom: 8px;">Frontend</h4>
-                        <p style="font-size: 0.9rem; color: var(--text-secondary);">Vanilla JS, HTML5, CSS3<br>Highlight.js for syntax</p>
+                        <p style="font-size: 0.9rem; color: var(--text-secondary);">Vanilla JS, HTML5,
+                            CSS3<br>Highlight.js for syntax</p>
                     </div>
                 </div>
             </div>
@@ -680,7 +755,10 @@
                 <div style="display: flex; gap: 12px; align-items: center;">
                     <a id="githubBtn" href="#" target="_blank" class="btn">View on GitHub</a>
                     <button class="close-btn" onclick="closeCodeModal()">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                            <path
+                                d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                        </svg>
                     </button>
                 </div>
             </div>
@@ -694,7 +772,7 @@
     <script>
         // Use relative path to api endpoints
         const API_BASE = '/api';
-        
+
         let allAnalyses = [];
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -752,16 +830,16 @@
             const list = document.getElementById('chaptersList');
             const loading = document.getElementById('loading');
             const noData = document.getElementById('noData');
-            
+
             try {
                 const res = await fetch(`${API_BASE}/analyses`);
                 if (!res.ok) throw new Error('Failed to load API');
-                
+
                 const json = await res.json();
-                
+
                 if (json.success && json.data.length > 0) {
                     allAnalyses = json.data;
-                    
+
                     // Update Repo Header based on the first record (assuming single repo for now)
                     if (allAnalyses.length > 0) {
                         document.getElementById('repoOwner').innerText = allAnalyses[0].repo_owner || "Owner";
@@ -777,23 +855,23 @@
             } catch (err) {
                 console.error(err);
                 loading.style.display = 'none';
-                
+
                 // Fallback to static JSON for testing if API is down
                 try {
                     const fallback = await fetch('file_metadata.json');
                     const staticData = await fallback.json();
-                    
+
                     // Convert static format to mock analysis format to display something
                     const vals = Object.values(staticData);
                     if (vals.length > 0) {
                         document.getElementById('repoOwner').innerText = vals[0].repo ? vals[0].repo.split('/')[0] : "Penter";
                         document.getElementById('repoName').innerText = vals[0].repo ? vals[0].repo.split('/')[1] : "Code";
-                        
+
                         // Grouping logic for static omitted for brevity, just show error
                         noData.innerHTML = `<h3>API Server is not running</h3><p>Please run api.py backend.</p>`;
                         noData.style.display = 'block';
                     }
-                } catch(e) {
+                } catch (e) {
                     noData.style.display = 'block';
                 }
             }
@@ -804,10 +882,10 @@
             list.innerHTML = '';
 
             data.forEach(item => {
-                const date = new Date(item.created_at).toLocaleString('en-US', { 
-                    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' 
+                const date = new Date(item.created_at).toLocaleString('en-US', {
+                    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
                 });
-                
+
                 const html = `
                     <div class="chapter-card" onclick="openChapter('${item.analysis_id}')">
                         <div class="chapter-header">
@@ -815,7 +893,7 @@
                                 <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M1.5 14.25c0 .138.112.25.25.25H4v-1.25a.75.75 0 01.75-.75h2.5a.75.75 0 01.75.75v1.25h2.25a.25.25 0 00.25-.25V1.75a.25.25 0 00-.25-.25h-8.5a.25.25 0 00-.25.25v12.5zM1.75 0h8.5C11.216 0 12 .784 12 1.75v12.5A1.75 1.75 0 0110.25 16h-8.5A1.75 1.75 0 010 14.25V1.75C0 .784.784 0 1.75 0zM3 3.25c0-.138.112-.25.25-.25h2.5a.25.25 0 01.25.25v1.5a.25.25 0 01-.25.25h-2.5a.25.25 0 01-.25-.25v-1.5zm0 4c0-.138.112-.25.25-.25h2.5a.25.25 0 01.25.25v1.5a.25.25 0 01-.25.25h-2.5a.25.25 0 01-.25-.25v-1.5z"></path></svg>
                                 Chapter / Analysis Run
                             </div>
-                            <span class="commit-hash">${item.start_commit.substring(0,7)}...${item.end_commit.substring(0,7)}</span>
+                            <span class="commit-hash">${item.start_commit.substring(0, 7)}...${item.end_commit.substring(0, 7)}</span>
                         </div>
                         <div class="chapter-meta">
                             <span>Branch: <strong>${item.branch}</strong></span>
@@ -835,13 +913,13 @@
         }
 
         // Search Filter
-        function searchAnalyses(e, clear=false) {
+        function searchAnalyses(e, clear = false) {
             if (clear) {
                 document.getElementById('searchInput').value = '';
             }
             const q = document.getElementById('searchInput').value.toLowerCase();
-            const filtered = allAnalyses.filter(a => 
-                a.analysis_id.toLowerCase().includes(q) || 
+            const filtered = allAnalyses.filter(a =>
+                a.analysis_id.toLowerCase().includes(q) ||
                 a.branch.toLowerCase().includes(q) ||
                 a.start_commit.toLowerCase().includes(q) ||
                 a.end_commit.toLowerCase().includes(q)
@@ -854,46 +932,46 @@
             // Switch tabs visually without changing main tab active state completely (keep under Chapters)
             document.getElementById('chapters').classList.remove('active');
             document.getElementById('chapterDetail').classList.add('active');
-            
+
             const analysis = allAnalyses.find(a => a.analysis_id === analysisId);
-            
+
             document.getElementById('detailHeader').innerHTML = `
                 <h2 style="margin-bottom: 8px;">Analysis: ${analysisId.split('_')[0]}...</h2>
                 <div class="chapter-meta">
-                    <span class="commit-hash">${analysis.start_commit.substring(0,7)}...${analysis.end_commit.substring(0,7)}</span>
+                    <span class="commit-hash">${analysis.start_commit.substring(0, 7)}...${analysis.end_commit.substring(0, 7)}</span>
                     <span>Branch: ${analysis.branch}</span>
                 </div>
             `;
-            
+
             const loading = document.getElementById('detailLoading');
             const fileList = document.getElementById('fileList');
             const fileItems = document.getElementById('fileItems');
-            
+
             loading.style.display = 'block';
             fileList.style.display = 'none';
             fileItems.innerHTML = '';
-            
+
             try {
                 const res = await fetch(`${API_BASE}/analysis/${analysisId}/files`);
                 const json = await res.json();
-                
+
                 if (json.success) {
                     const files = json.data;
                     document.getElementById('fileCount').innerText = `${files.length} changed files`;
-                    
+
                     files.forEach(f => {
                         // Generate diff blocks (mocking 5 blocks visual based on additions/removals)
                         const total = f.total_changes || 1;
                         const addRatio = f.added_lines / total;
                         const delRatio = f.removed_lines / total;
-                        
+
                         let blocks = '';
-                        for(let i=0; i<5; i++) {
+                        for (let i = 0; i < 5; i++) {
                             if (i < 5 * addRatio) blocks += '<div class="diff-block add"></div>';
                             else if (i < 5 * (addRatio + delRatio)) blocks += '<div class="diff-block del"></div>';
                             else blocks += '<div class="diff-block neu"></div>';
                         }
-                        
+
                         fileItems.insertAdjacentHTML('beforeend', `
                             <div class="file-item" style="cursor:pointer;" onclick="viewFileCode('${f.raw_github_url}', '${f.github_url}', '${f.file_name}')">
                                 <div class="file-info">
@@ -908,11 +986,11 @@
                             </div>
                         `);
                     });
-                    
+
                     loading.style.display = 'none';
                     fileList.style.display = 'block';
                 }
-            } catch(e) {
+            } catch (e) {
                 console.error(e);
                 loading.style.display = 'none';
             }
@@ -926,21 +1004,21 @@
             const spinner = document.getElementById('codeSpinner');
             const pre = document.querySelector('.modal-body pre');
             const codeBlock = document.getElementById('codeBlock');
-            
+
             modal.classList.add('active');
             title.innerText = fileName;
             btn.href = githubUrl || '#';
             btn.style.display = githubUrl ? 'inline-block' : 'none';
-            
+
             spinner.style.display = 'block';
             pre.style.display = 'none';
             codeBlock.innerText = '';
             codeBlock.className = ''; // reset classes for hljs
-            
+
             // detect language loosely by extension
             const ext = fileName.split('.').pop().toLowerCase();
-            if(ext) codeBlock.classList.add(`language-${ext}`);
-            
+            if (ext) codeBlock.classList.add(`language-${ext}`);
+
             try {
                 // Try API first to avoid CORS
                 let content = '';
@@ -949,30 +1027,31 @@
                     const json = await res.json();
                     if (json.success) content = json.content;
                     else throw new Error(json.error);
-                } catch(e) {
+                } catch (e) {
                     // Fallback direct request
                     const res = await fetch(rawUrl);
                     if (!res.ok) throw new Error('Fetch failed');
                     content = await res.text();
                 }
-                
+
                 codeBlock.textContent = content;
                 // apply syntax highlighting
                 hljs.highlightElement(codeBlock);
-                
+
                 spinner.style.display = 'none';
                 pre.style.display = 'block';
-                
+
             } catch (err) {
                 spinner.style.display = 'none';
                 pre.style.display = 'block';
                 codeBlock.innerText = "Error loading code.\n" + err.message;
             }
         }
-        
+
         function closeCodeModal() {
             document.getElementById('codeModal').classList.remove('active');
         }
     </script>
 </body>
+
 </html>

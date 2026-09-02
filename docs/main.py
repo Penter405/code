@@ -1,14 +1,37 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+"""
+Portfolio Manager - 主程序
+CLI 工作流 + tkinter GUI 管理工具
+
+工作流:
+  Step 0: 選擇分支 (從哪個 branch 獲取代碼)
+  Step 1: 選擇提交範圍
+  Step 2: 選擇分析模式
+  Step 3: 選擇章節/資料夾
+  Step 4: 設定文件位置
+  Step 5: 保存到數據庫 + 靜態代碼
+  Step 6: 導出 JSON
+  Step 7: 打開 GUI
+"""
 
 import subprocess
 import json
 import os
 import sys
+import io
+import tkinter as tk
+from tkinter import ttk, messagebox, simpledialog
 from datetime import datetime
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 from pathlib import Path
-from database import Database
+from portfolio_db import PortfolioDB
+
+# Fix Windows encoding
+if sys.platform == 'win32':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+
 
 class Colors:
     """終端顏色定義"""
@@ -23,474 +46,838 @@ class Colors:
     UNDERLINE = '\033[4m'
     GRAY = '\033[90m'
 
-class CommitAnalyzer:
+
+class PortfolioManager:
+    """Portfolio 管理器 - CLI 工作流"""
+
     def __init__(self, repo_path: str = None):
         if repo_path is None:
             repo_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        
+
         self.repo_path = repo_path
         self.docs_path = os.path.join(repo_path, "docs")
-        self.metadata_file = os.path.join(self.docs_path, "file_metadata.json")
-        
-        # 初始化數據庫
-        self.db = Database(os.path.join(self.docs_path, "analysis.db"))
-        
-        print(f"\n{Colors.CYAN}[DEBUG] 倉庫路徑: {self.repo_path}{Colors.ENDC}")
-        print(f"{Colors.CYAN}[DEBUG] Docs 路徑: {self.docs_path}{Colors.ENDC}")
-        print(f"{Colors.CYAN}[DEBUG] 數據庫: {self.db.db_path}{Colors.ENDC}\n")
-        
-        self.load_metadata()
-        self.print_header()
-    
-    def print_header(self):
-        """打印標題"""
-        print(f"\n{Colors.BOLD}{Colors.BLUE}{'='*60}{Colors.ENDC}")
-        print(f"{Colors.BOLD}{Colors.BLUE}  📊 Git 提交變更分析工具{Colors.ENDC}")
-        print(f"{Colors.BOLD}{Colors.BLUE}{'='*60}{Colors.ENDC}\n")
-    
+
+        # 使用新的 portfolio DB
+        self.db = PortfolioDB(os.path.join(self.docs_path, "portfolio.db"))
+
+        self.log('info', f"Repo: {self.repo_path}")
+        self.log('info', f"Docs: {self.docs_path}")
+        self.log('info', f"DB: {self.db.db_path}")
+
     def log(self, level: str, message: str):
-        """統一日誌輸出"""
+        """統一日誌"""
         levels = {
-            'info': f"{Colors.BLUE}ℹ️  {message}{Colors.ENDC}",
-            'success': f"{Colors.GREEN}✅ {message}{Colors.ENDC}",
-            'warning': f"{Colors.YELLOW}⚠️  {message}{Colors.ENDC}",
-            'error': f"{Colors.RED}❌ {message}{Colors.ENDC}",
-            'section': f"{Colors.BOLD}{Colors.CYAN}{'='*60}\n{Colors.CYAN}{message}{Colors.ENDC}",
+            'info': f"{Colors.BLUE}[INFO] {message}{Colors.ENDC}",
+            'success': f"{Colors.GREEN}[OK] {message}{Colors.ENDC}",
+            'warning': f"{Colors.YELLOW}[WARN] {message}{Colors.ENDC}",
+            'error': f"{Colors.RED}[ERR] {message}{Colors.ENDC}",
+            'section': f"\n{Colors.BOLD}{Colors.CYAN}{'='*60}\n  {message}\n{'='*60}{Colors.ENDC}",
         }
         print(levels.get(level, message))
-    
-    def run_git_command(self, command: str) -> str:
+
+    def run_git(self, command: str) -> str:
         """執行 Git 命令"""
         try:
             result = subprocess.run(
-                command,
-                shell=True,
-                cwd=self.repo_path,
-                capture_output=True,
-                text=True,
-                check=True
+                command, shell=True, cwd=self.repo_path,
+                capture_output=True, text=True, check=True
             )
             return result.stdout.strip()
         except subprocess.CalledProcessError as e:
-            self.log('error', f"Git 命令失敗: {e.stderr}")
+            self.log('error', f"Git error: {e.stderr.strip()}")
             return ""
-    
-    def get_all_commits(self) -> List[Dict]:
-        """獲取所有提交信息"""
-        self.log('info', "正在獲取提交記錄...")
-        output = self.run_git_command(
-            'git log --pretty=format:"%H|%an|%ae|%ai|%s"'
-        )
-        commits = []
-        for line in output.split('\n'):
-            if line:
-                parts = line.split('|')
-                if len(parts) == 5:
-                    commits.append({
-                        'hash': parts[0],
-                        'author': parts[1],
-                        'email': parts[2],
-                        'date': parts[3],
-                        'message': parts[4]
-                    })
-        return commits
-    
-    def get_commit_range(self, commits: List[Dict]) -> Tuple[str, str]:
-        """詢問提交範圍 - 帶灰色默認值"""
-        self.log('section', '📋 第一步: 選擇提交範圍')
-        
-        if not commits:
-            self.log('error', "找不到任何提交")
-            sys.exit(1)
-        
-        print(f"\n{Colors.YELLOW}當前分支提交統計:{Colors.ENDC}")
-        print(f"  • 總提交數: {len(commits)}")
-        print(f"  • 最早提交: {commits[-1]['hash'][:7]} - {commits[-1]['message']}")
-        print(f"  • 最新提交: {commits[0]['hash'][:7]} - {commits[0]['message']}")
-        
-        # 灰色顯示默認值
-        default_start = commits[-1]['hash']
-        default_end = "HEAD"
-        
-        print(f"\n{Colors.GRAY}(按 Enter 使用默認值){Colors.ENDC}")
-        start_input = input(f"{Colors.CYAN}起始提交雜湊值 {Colors.GRAY}[預設: {default_start[:7]}]{Colors.CYAN}: {Colors.ENDC}").strip()
-        end_input = input(f"{Colors.CYAN}結束提交雜湊值 {Colors.GRAY}[預設: {default_end}]{Colors.CYAN}: {Colors.ENDC}").strip()
-        
-        start = start_input if start_input else default_start
-        end = end_input if end_input else default_end
-        
-        self.log('success', f"已選擇範圍: {start[:7]}...{end}")
-        return (start, end)
-    
-    def get_changed_files(self, start_commit: str, end_commit: str) -> List[str]:
-        """
-        獲取在指定提交範圍內變更的文件列表
-        逐個 commit 檢查變更，確保捕捉到所有曾經被修改過的文件
-        """
-        self.log('info', f"正在獲取 {start_commit[:7]}...{end_commit} 之間的變更文件...")
-        
-        commits_output = self.run_git_command(f"git log --format='%H' {start_commit}..{end_commit}")
-        commits = [c for c in commits_output.split('\n') if c]
-        
-        changed_files = set()
-        for commit in commits:
-            output = self.run_git_command(f"git diff --name-only {commit}^..{commit}")
-            for f in output.split('\n'):
-                if f:
-                    changed_files.add(f)
-                    
-        return list(changed_files)
-    
-    def get_file_latest_status(self, file_path: str, end_commit: str) -> Dict:
-        """
-        獲取文件在 end_commit 時的最新狀態
-        返回: 文件是否存在、行數、最後修改提交等信息
-        """
-        # 檢查文件是否在 end_commit 時存在
-        exists = self.run_git_command(
-            f"git cat-file -e {end_commit}:{file_path} 2>/dev/null && echo 'exists' || echo 'missing'"
-        )
-        
-        file_exists = exists == 'exists'
-        
-        # 獲取文件最後修改該文件的提交
-        last_commit = self.run_git_command(
-            f"git log --follow -1 --format='%H' {end_commit} -- {file_path}"
-        )
-        
-        # 獲取文件在 end_commit 時的行數
-        if file_exists:
-            line_count = self.run_git_command(
-                f"git show {end_commit}:{file_path} | wc -l"
-            )
-            try:
-                line_count = int(line_count)
-            except:
-                line_count = 0
-        else:
-            line_count = 0
-        
-        return {
-            'exists': file_exists,
-            'line_count': line_count,
-            'last_commit': last_commit[:7] if last_commit else 'unknown',
-            'full_last_commit': last_commit if last_commit else 'unknown'
-        }
-    
-    def get_user_mode(self) -> str:
-        """
-        選擇分析模式
-        模式 1: 只顯示新代碼 (新增行)
-        模式 2: 顯示所有更改 (新增 + 刪除)
-        """
-        self.log('section', '🎯 第二步: 選擇分析模式')
-        
-        print(f"\n{Colors.CYAN}1. 只顯示新代碼 (新增行){Colors.ENDC}")
-        print(f"   📝 只統計在選擇範圍內 新增 的代碼行數")
-        
-        print(f"\n{Colors.CYAN}2. 顯示所有更改 (新增 + 刪除){Colors.ENDC}")
-        print(f"   📝 統計在選擇範圍內 新增 和 刪除 的代碼行數")
-        
-        print(f"\n{Colors.GRAY}(按 Enter 使用默認值){Colors.ENDC}")
-        mode = input(f"{Colors.CYAN}請選擇 (1 或 2) {Colors.GRAY}[預設: 1]{Colors.CYAN}: {Colors.ENDC}").strip() or "1"
-        
-        result = "new_only" if mode == "1" else "all_changes"
-        mode_text = "僅新代碼" if mode == "1" else "所有更改"
-        
-        self.log('success', f"已選擇模式: {mode_text}")
-        return result
-    
-    def get_file_diff(self, start_commit: str, end_commit: str, file_path: str, mode: str) -> Dict:
-        """
-        獲取單個文件的差異
-        透過迴圈檢查範圍內的每個 commit，計算每個 commit 對應的變更行數加總
-        """
-        commits_output = self.run_git_command(f"git log --format='%H' {start_commit}..{end_commit}")
-        commits = [c for c in commits_output.split('\n') if c]
-        
-        total_added = 0
-        total_removed = 0
-        
-        for commit in commits:
-            # 計算該 commit 和前一個 commit 的差異
-            added = self.run_git_command(
-                f"git diff {commit}^..{commit} -- {file_path} | grep '^+' | grep -v '^+++' | wc -l"
-            )
-            total_added += int(added) if added.isdigit() else 0
-            
-            if mode != "new_only":
-                removed = self.run_git_command(
-                    f"git diff {commit}^..{commit} -- {file_path} | grep '^-' | grep -v '^---' | wc -l"
-                )
-                total_removed += int(removed) if removed.isdigit() else 0
-                
-        return {
-            'file': file_path,
-            'added_lines': total_added,
-            'removed_lines': total_removed,
-            'total_changes': total_added + total_removed
-        }
-    
-    def get_file_locations(self, files: List[str]) -> Dict[str, str]:
-        """詢問文件位置"""
-        self.log('section', '📂 第三步: 設定文件位置')
-        
-        locations = {}
-        for i, file in enumerate(files, 1):
-            default_location = f"docs/{file}"
-            location = input(f"\n{Colors.CYAN}[{i}/{len(files)}] 文件 '{file}' 位置 {Colors.GRAY}[預設: {default_location}]{Colors.CYAN}: {Colors.ENDC}").strip()
-            locations[file] = location or default_location
-        
-        self.log('success', f"已設定 {len(files)} 個文件的位置")
-        return locations
-    
-    def generate_github_url(self, file_path: str, branch: str = "main") -> str:
-        """
-        生成 GitHub 上的文件 URL
-        """
-        repo_owner = "Penter405"
-        repo_name = "code"
-        return f"https://github.com/{repo_owner}/{repo_name}/blob/{branch}/{file_path}"
-    
-    def generate_raw_github_url(self, file_path: str, branch: str = "main") -> str:
-        """
-        生成 GitHub 原始文件 URL (用於直接獲取內容)
-        """
-        repo_owner = "Penter405"
-        repo_name = "code"
-        return f"https://raw.githubusercontent.com/{repo_owner}/{repo_name}/{branch}/{file_path}"
-    
-    def update_metadata(self, file_info: List[Dict], locations: Dict[str, str], mode: str, branch: str = "main"):
-        """更新元數據 - 包含 GitHub URLs"""
-        self.log('section', '💾 第四步: 更新元數據')
-        
-        for info in file_info:
-            file_key = info['file']
-            self.metadata[file_key] = {
-                'file_name': file_key,
-                'location': locations.get(file_key, f"docs/{file_key}"),
-                'github_url': self.generate_github_url(file_key, branch),
-                'raw_github_url': self.generate_raw_github_url(file_key, branch),
-                'last_updated': datetime.now().isoformat(),
-                'mode': mode,
-                'added_lines': info['added_lines'],
-                'removed_lines': info['removed_lines'],
-                'total_changes': info['total_changes'],
-                'repo': 'Penter405/code',
-                'branch': branch
-            }
-        
-        self.save_metadata()
-        self.log('success', f"已保存 {len(file_info)} 個文件的元數據到 {self.metadata_file}")
-        
-        # 打印 GitHub URLs
-        print(f"\n{Colors.CYAN}GitHub 文件位置:{Colors.ENDC}")
-        for file_key in self.metadata:
-            url = self.metadata[file_key].get('github_url', '')
-            print(f"  • {file_key}: {url}")
-    
-    def save_to_database(self, start_commit: str, end_commit: str, mode: str,
-                        file_info: List[Dict], locations: Dict[str, str], commits: List[Dict]):
-        """保存數據到數據庫"""
-        self.log('section', '💾 保存數據到數據庫')
-        
-        # 獲取倉庫信息
-        repo_name = "code"
-        repo_owner = "Penter405"
-        branch = self.run_git_command("git rev-parse --abbrev-ref HEAD")
-        
-        # 創建分析記錄
-        analysis_id = self.db.create_analysis_record(
-            repo_name=repo_name,
-            repo_owner=repo_owner,
-            branch=branch,
-            start_commit=start_commit,
-            end_commit=end_commit,
-            mode=mode,
-            total_files=len(file_info)
-        )
-        
-        print(f"\n{Colors.BLUE}分析 ID: {Colors.YELLOW}{analysis_id}{Colors.ENDC}")
-        
-        # 插入文件變更
-        for info in file_info:
-            self.db.insert_file_change(
-                analysis_id=analysis_id,
-                file_name=info['file'],
-                file_location=locations[info['file']],
-                added_lines=info['added_lines'],
-                removed_lines=info['removed_lines'],
-                total_changes=info['total_changes'],
-                github_url=self.generate_github_url(info['file'], branch),
-                raw_github_url=self.generate_raw_github_url(info['file'], branch)
-            )
-        
-        # 插入提交信息
-        for commit in commits:
-            self.db.insert_commit(
-                analysis_id=analysis_id,
-                commit_hash=commit['hash'],
-                author=commit['author'],
-                email=commit['email'],
-                commit_date=commit['date'],
-                message=commit['message']
-            )
-        
-        # 導出 JSON 用於 Web 查看
-        json_path = self.db.export_to_json(analysis_id, 
-            os.path.join(self.docs_path, f"analysis_{analysis_id}.json"))
-        
-        self.log('success', f"數據已保存到數據庫")
-        print(f"  • 分析記錄已創建: {analysis_id}")
-        print(f"  • JSON 導出: {json_path}")
-    
-    def load_metadata(self):
-        """載入元數據"""
-        if os.path.exists(self.metadata_file):
-            with open(self.metadata_file, 'r', encoding='utf-8') as f:
-                self.metadata = json.load(f)
-        else:
-            self.metadata = {}
-    
-    def save_metadata(self):
-        """保存元數據"""
-        with open(self.metadata_file, 'w', encoding='utf-8') as f:
-            json.dump(self.metadata, f, indent=2, ensure_ascii=False)
-    
-    def select_and_pull_branch(self) -> bool:
-        """選擇並更新分支"""
-        self.log('section', '🌐 第零步: 選擇並更新分支')
-        
-        # 獲取所有本地和遠程分支
-        output = self.run_git_command("git branch -a --format='%(refname:short)'")
+
+    # =========================================================================
+    # Step 0: 選擇分支
+    # =========================================================================
+
+    def step_select_branch(self) -> Optional[str]:
+        """選擇要分析的分支 (代碼所在分支)"""
+        self.log('section', 'Step 0: Select Branch (code source)')
+
+        # 先 fetch
+        self.log('info', 'Fetching remote branches...')
+        self.run_git('git fetch --all')
+
+        # 獲取分支列表
+        output = self.run_git("git branch -a --format='%(refname:short)'")
         if not output:
-            self.log('error', "無法獲取分支列表")
-            return False
-            
-        # 過濾並去重
-        raw_branches = [b.strip() for b in output.split('\n') if b.strip()]
+            self.log('error', 'Cannot list branches')
+            return None
+
+        raw = [b.strip().strip("'") for b in output.split('\n') if b.strip()]
         branches = set()
-        for b in raw_branches:
+        for b in raw:
             if b.startswith('origin/'):
                 b = b[7:]
             if b and b != 'HEAD':
                 branches.add(b)
-                
+
         branches = sorted(list(branches))
-        current_branch = self.run_git_command("git rev-parse --abbrev-ref HEAD")
-        
-        print(f"\n{Colors.CYAN}當前分支: {current_branch}{Colors.ENDC}")
-        print(f"\n可用分支:")
-        for i, branch in enumerate(branches, 1):
-            marker = "*" if branch == current_branch else " "
-            print(f"  {marker} {i}. {branch}")
-            
-        print(f"\n{Colors.GRAY}(按 Enter 使用當前分支 {current_branch}){Colors.ENDC}")
-        choice = input(f"{Colors.CYAN}請選擇要分析的分支編號或名稱: {Colors.ENDC}").strip()
-        
-        selected_branch = current_branch
+        current = self.run_git("git rev-parse --abbrev-ref HEAD")
+
+        print(f"\n{Colors.CYAN}Current branch: {current}{Colors.ENDC}")
+        print(f"\nAvailable branches:")
+        for i, b in enumerate(branches, 1):
+            marker = " *" if b == current else "  "
+            print(f"  {marker} {i}. {b}")
+
+        print(f"\n{Colors.GRAY}(Enter to use current: {current}){Colors.ENDC}")
+        choice = input(f"{Colors.CYAN}Branch to analyze (number or name): {Colors.ENDC}").strip()
+
+        selected = current
         if choice:
             if choice.isdigit() and 1 <= int(choice) <= len(branches):
-                selected_branch = branches[int(choice) - 1]
+                selected = branches[int(choice) - 1]
             elif choice in branches:
-                selected_branch = choice
+                selected = choice
             else:
-                self.log('error', f"無效的分支選擇: {choice}")
-                return False
-                
-        # 檢查是否有未提交的更改
-        status = self.run_git_command("git status --porcelain")
-        if status:
-            self.log('error', "有未提交的更改，無法安全切換或拉取分支。請先提交或暫存更改。")
-            return False
-            
-        # 切換分支
-        if selected_branch != current_branch:
-            print(f"\n{Colors.BLUE}正在切換到分支 {selected_branch}...{Colors.ENDC}")
-            checkout_res = subprocess.run(
-                f"git checkout {selected_branch}", 
-                shell=True, cwd=self.repo_path, capture_output=True, text=True
-            )
-            if checkout_res.returncode != 0:
-                self.log('error', f"無法切換到分支 {selected_branch}:\n{checkout_res.stderr}")
-                return False
-                
-        # 拉取最新代碼
-        print(f"{Colors.BLUE}正在拉取最新代碼 (git pull origin {selected_branch})...{Colors.ENDC}")
-        pull_res = subprocess.run(
-            f"git pull origin {selected_branch}", 
-            shell=True, cwd=self.repo_path, capture_output=True, text=True
+                self.log('error', f'Invalid branch: {choice}')
+                return None
+
+        self.log('success', f'Analyzing branch: {selected}')
+        return selected
+
+    # =========================================================================
+    # Step 1: 提交範圍
+    # =========================================================================
+
+    def step_commit_range(self, branch: str) -> Optional[Tuple[str, str]]:
+        """選擇提交範圍"""
+        self.log('section', 'Step 1: Select Commit Range')
+
+        # 獲取該分支的提交
+        output = self.run_git(
+            f'git log origin/{branch} --pretty=format:"%H|%ai|%s" --max-count=50'
         )
+        if not output:
+            # 嘗試不帶 origin/
+            output = self.run_git(
+                f'git log {branch} --pretty=format:"%H|%ai|%s" --max-count=50'
+            )
+
+        if not output:
+            self.log('error', f'No commits found on {branch}')
+            return None
+
+        commits = []
+        for line in output.split('\n'):
+            line = line.strip().strip('"')
+            if line:
+                parts = line.split('|', 2)
+                if len(parts) == 3:
+                    commits.append({
+                        'hash': parts[0],
+                        'date': parts[1],
+                        'message': parts[2]
+                    })
+
+        if not commits:
+            self.log('error', 'No commits parsed')
+            return None
+
+        print(f"\n{Colors.YELLOW}Branch '{branch}' has {len(commits)} commits (showing last 50):{Colors.ENDC}")
+        print(f"  Oldest: {commits[-1]['hash'][:7]} - {commits[-1]['message']}")
+        print(f"  Newest: {commits[0]['hash'][:7]} - {commits[0]['message']}")
+
+        default_start = commits[-1]['hash']
+        default_end = commits[0]['hash']
+
+        print(f"\n{Colors.GRAY}(Enter for defaults){Colors.ENDC}")
+        start = input(
+            f"{Colors.CYAN}Start commit {Colors.GRAY}[default: {default_start[:7]}]{Colors.CYAN}: {Colors.ENDC}"
+        ).strip() or default_start
+
+        end = input(
+            f"{Colors.CYAN}End commit {Colors.GRAY}[default: {default_end[:7]} (HEAD)]{Colors.CYAN}: {Colors.ENDC}"
+        ).strip() or default_end
+
+        self.log('success', f'Range: {start[:7]}...{end[:7]}')
+        return (start, end)
+
+    # =========================================================================
+    # Step 2: 獲取變更文件
+    # =========================================================================
+
+    def step_get_changed_files(self, branch: str, start: str, end: str) -> List[Dict]:
+        """獲取變更文件列表"""
+        self.log('section', 'Step 2: Scanning Changed Files')
+
+        # 獲取範圍內的提交
+        commits_out = self.run_git(
+            f"git log --format='%H|%ai|%s' {start}..{end}"
+        )
+
+        # 如果用的是相同 commit，至少包含 end commit 自身
+        if not commits_out and start == end:
+            commits_out = self.run_git(
+                f"git log --format='%H|%ai|%s' -1 {end}"
+            )
+
+        commit_list = []
+        if commits_out:
+            for line in commits_out.split('\n'):
+                line = line.strip().strip("'")
+                if line:
+                    parts = line.split('|', 2)
+                    if len(parts) == 3:
+                        commit_list.append({
+                            'hash': parts[0],
+                            'date': parts[1],
+                            'message': parts[2]
+                        })
+
+        # 獲取變更的文件列表
+        diff_output = self.run_git(f"git diff --name-only {start}..{end}")
+        if not diff_output and start != end:
+            # 嘗試 log 方式
+            diff_output = self.run_git(
+                f"git log --name-only --format='' {start}..{end}"
+            )
+
+        if not diff_output:
+            self.log('warning', 'No changed files found')
+            return []
+
+        # 去重
+        files = list(set(f.strip() for f in diff_output.split('\n') if f.strip()))
         
-        if pull_res.returncode != 0:
-            self.log('error', f"無法安全拉取分支 {selected_branch}，請手動解決衝突或檢查遠程倉庫狀態。")
-            print(f"{Colors.RED}{pull_res.stderr}{Colors.ENDC}")
-            return False
-            
-        self.log('success', f"分支 {selected_branch} 已更新並準備就緒")
-        return True
+        self.log('success', f'Found {len(files)} changed files')
+        for f in files:
+            print(f"  {Colors.CYAN}* {f}{Colors.ENDC}")
+
+        # 獲取最後一個提交的信息
+        last_commit = commit_list[0] if commit_list else {
+            'hash': end[:7], 'date': datetime.now().isoformat(), 'message': 'unknown'
+        }
+
+        return [{
+            'file_path': f,
+            'file_name': os.path.basename(f),
+            'commit_hash': last_commit['hash'],
+            'commit_time': last_commit['date'],
+            'commit_name': last_commit['message'],
+        } for f in files]
+
+    # =========================================================================
+    # Step 3: 選擇章節/資料夾
+    # =========================================================================
+
+    def step_select_folder(self) -> Optional[int]:
+        """選擇或創建資料夾"""
+        self.log('section', 'Step 3: Select Chapter / Folder')
+
+        folders = self.db.get_all_folders()
+
+        if folders:
+            print(f"\n{Colors.YELLOW}Existing folders:{Colors.ENDC}")
+            for i, f in enumerate(folders, 1):
+                count = f.get('file_count', 0)
+                print(f"  {i}. {f['name']} ({count} files)")
+            print(f"  {len(folders)+1}. {Colors.GREEN}+ Create new folder{Colors.ENDC}")
+        else:
+            print(f"\n{Colors.YELLOW}No folders yet. Creating one.{Colors.ENDC}")
+
+        print(f"\n{Colors.GRAY}(Enter a number or type a new folder name){Colors.ENDC}")
+        choice = input(f"{Colors.CYAN}Folder: {Colors.ENDC}").strip()
+
+        if not choice:
+            self.log('error', 'No folder selected')
+            return None
+
+        # 選擇現有的
+        if choice.isdigit():
+            idx = int(choice)
+            if 1 <= idx <= len(folders):
+                folder = folders[idx - 1]
+                self.log('success', f'Selected folder: {folder["name"]}')
+                return folder['id']
+            elif idx == len(folders) + 1:
+                # 創建新的
+                name = input(f"{Colors.CYAN}New folder name: {Colors.ENDC}").strip()
+                if not name:
+                    self.log('error', 'Empty name')
+                    return None
+                fid = self.db.create_folder(name)
+                self.log('success', f'Created folder: {name} (id={fid})')
+                return fid
+
+        # 直接輸入名稱 → 找或建
+        existing = self.db.get_folder_by_name(choice)
+        if existing:
+            self.log('success', f'Using existing folder: {choice}')
+            return existing['id']
+        else:
+            fid = self.db.create_folder(choice)
+            self.log('success', f'Created new folder: {choice} (id={fid})')
+            return fid
+
+    # =========================================================================
+    # Step 4: 保存到 DB + 靜態代碼
+    # =========================================================================
+
+    def step_save_files(self, files: List[Dict], folder_id: int, branch: str):
+        """保存文件到數據庫並複製靜態代碼"""
+        self.log('section', 'Step 4: Saving Files to DB')
+
+        saved = 0
+        skipped = 0
+        updated = 0
+
+        for i, f in enumerate(files, 1):
+            file_name = f['file_name']
+            file_path = f['file_path']
+
+            github_url = PortfolioDB.generate_github_url(file_path, branch)
+            raw_github_url = PortfolioDB.generate_raw_github_url(file_path, branch)
+
+            print(f"\n  [{i}/{len(files)}] {Colors.CYAN}{file_path}{Colors.ENDC}")
+
+            # 檢查重複
+            dup = self.db.check_duplicate(file_name, folder_id)
+            if dup:
+                print(f"    {Colors.YELLOW}[DUPLICATE] Already exists in this folder!{Colors.ENDC}")
+                print(f"    Existing: branch={dup['branch']}, commit={dup['commit_name'][:40]}")
+                choice = input(f"    {Colors.CYAN}Update? (y/n) {Colors.GRAY}[default: n]{Colors.CYAN}: {Colors.ENDC}").strip().lower()
+                if choice == 'y':
+                    self.db.update_file(
+                        dup['id'], f['commit_time'], f['commit_name'],
+                        github_url, raw_github_url, branch, file_path
+                    )
+                    # 保存靜態代碼
+                    code = self.db.fetch_code_from_branch(branch, file_path, self.repo_path)
+                    if code:
+                        self.db.save_static_code(dup['id'], code)
+                        print(f"    {Colors.GREEN}Updated + code saved{Colors.ENDC}")
+                    else:
+                        print(f"    {Colors.GREEN}Updated (code fetch failed){Colors.ENDC}")
+                    updated += 1
+                else:
+                    print(f"    {Colors.GRAY}Skipped{Colors.ENDC}")
+                    skipped += 1
+                continue
+
+            # 添加新文件
+            file_id, is_new = self.db.add_file(
+                file_name=file_name,
+                folder_id=folder_id,
+                commit_time=f['commit_time'],
+                commit_name=f['commit_name'],
+                github_url=github_url,
+                raw_github_url=raw_github_url,
+                branch=branch,
+                file_path=file_path,
+            )
+
+            if is_new:
+                # 保存靜態代碼
+                code = self.db.fetch_code_from_branch(branch, file_path, self.repo_path)
+                if code:
+                    self.db.save_static_code(file_id, code)
+                    print(f"    {Colors.GREEN}Saved + code copied{Colors.ENDC}")
+                else:
+                    print(f"    {Colors.YELLOW}Saved (code fetch failed - will use GitHub URL){Colors.ENDC}")
+                saved += 1
+            else:
+                print(f"    {Colors.GRAY}Already exists{Colors.ENDC}")
+                skipped += 1
+
+        print(f"\n{Colors.GREEN}Summary: {saved} saved, {updated} updated, {skipped} skipped{Colors.ENDC}")
+
+    # =========================================================================
+    # Step 5: 導出 JSON
+    # =========================================================================
+
+    def step_export_json(self):
+        """導出 portfolio_data.json"""
+        self.log('section', 'Step 5: Exporting JSON')
+        path = self.db.export_portfolio_json()
+        self.log('success', f'Exported: {path}')
+
+    # =========================================================================
+    # Main Run
+    # =========================================================================
 
     def run(self):
-        """執行主程序"""
+        """執行 CLI 工作流"""
         try:
-            if not self.select_and_pull_branch():
-                return
-                
-            commits = self.get_all_commits()
-            if not commits:
-                self.log('error', "找不到提交記錄")
-                return
-            
-            start_commit, end_commit = self.get_commit_range(commits)
-            
-            # 獲取在範圍內變更的文件
-            changed_files = self.get_changed_files(start_commit, end_commit)
-            
-            if not changed_files:
-                self.log('warning', "在此範圍內沒有變更的文件")
-                return
-            
-            print(f"\n{Colors.GREEN}找到 {len(changed_files)} 個在選定範圍內變更的文件:{Colors.ENDC}")
-            for f in changed_files:
-                print(f"  {Colors.CYAN}• {f}{Colors.ENDC}")
-            
-            # 選擇分析模式
-            mode = self.get_user_mode()
-            
-            print(f"\n{Colors.BLUE}正在分析文件變更...{Colors.ENDC}")
-            file_info = []
-            for i, file in enumerate(changed_files, 1):
-                print(f"  [{i}/{len(changed_files)}] {file}...", end='', flush=True)
-                diff_info = self.get_file_diff(start_commit, end_commit, file, mode)
-                file_info.append(diff_info)
-                print(f" {Colors.GREEN}✓{Colors.ENDC}")
-            
-            # 獲取文件位置
-            locations = self.get_file_locations(changed_files)
-            
-            # 保存到數據庫
-            self.save_to_database(start_commit, end_commit, mode, file_info, locations, commits)
-            
-            # 獲取分支名
-            branch = self.run_git_command("git rev-parse --abbrev-ref HEAD")
-            
-            # 同時保存 JSON 以兼容舊的 index.html (包含 GitHub URLs)
-            self.update_metadata(file_info, locations, mode, branch)
-            
-            print(f"\n{Colors.BOLD}{Colors.GREEN}{'='*60}")
-            print("✨ 流程完成！")
+            print(f"\n{Colors.BOLD}{Colors.BLUE}{'='*60}")
+            print(f"  Portfolio Manager")
             print(f"{'='*60}{Colors.ENDC}\n")
-            
+
+            print(f"What would you like to do?")
+            print(f"  1. Add files from a branch (full workflow)")
+            print(f"  2. Open folder management GUI")
+            print(f"  3. Export portfolio_data.json only")
+
+            choice = input(f"\n{Colors.CYAN}Choice {Colors.GRAY}[default: 2]{Colors.CYAN}: {Colors.ENDC}").strip() or "2"
+
+            if choice == "1":
+                self._run_full_workflow()
+            elif choice == "2":
+                self.step_export_json()
+                self._open_gui()
+            elif choice == "3":
+                self.step_export_json()
+            else:
+                self.log('error', 'Invalid choice')
+
         except KeyboardInterrupt:
-            print(f"\n{Colors.YELLOW}程序被用戶中斷{Colors.ENDC}")
+            print(f"\n{Colors.YELLOW}Cancelled by user{Colors.ENDC}")
             sys.exit(0)
         except Exception as e:
-            self.log('error', f"發生錯誤: {str(e)}")
+            self.log('error', f'Error: {str(e)}')
             import traceback
             traceback.print_exc()
             sys.exit(1)
 
+    def _run_full_workflow(self):
+        """完整的添加文件工作流"""
+        branch = self.step_select_branch()
+        if not branch:
+            return
+
+        result = self.step_commit_range(branch)
+        if not result:
+            return
+        start, end = result
+
+        files = self.step_get_changed_files(branch, start, end)
+        if not files:
+            return
+
+        folder_id = self.step_select_folder()
+        if not folder_id:
+            return
+
+        self.step_save_files(files, folder_id, branch)
+        self.step_export_json()
+
+        print(f"\n{Colors.BOLD}{Colors.GREEN}{'='*60}")
+        print(f"  Done! Opening GUI...")
+        print(f"{'='*60}{Colors.ENDC}\n")
+
+        self._open_gui()
+
+    def _open_gui(self):
+        """打開 tkinter GUI"""
+        gui = PortfolioGUI(self.db)
+        gui.run()
+
+
+# =============================================================================
+# tkinter GUI
+# =============================================================================
+
+class PortfolioGUI:
+    """Portfolio 管理 GUI"""
+
+    def __init__(self, db: PortfolioDB):
+        self.db = db
+        self.root = tk.Tk()
+        self.root.title("Portfolio Manager")
+        self.root.geometry("1000x650")
+        self.root.minsize(800, 500)
+        self._configure_style()
+        self._build_ui()
+        self._refresh_folders()
+
+    def _configure_style(self):
+        """配置主題和顏色"""
+        self.root.configure(bg='#1e1e2e')
+
+        self.style = ttk.Style()
+        self.style.theme_use('clam')
+
+        # 顏色
+        self.bg = '#1e1e2e'
+        self.bg_secondary = '#313244'
+        self.bg_surface = '#45475a'
+        self.text = '#cdd6f4'
+        self.text_secondary = '#a6adc8'
+        self.accent = '#89b4fa'
+        self.green = '#a6e3a1'
+        self.red = '#f38ba8'
+        self.yellow = '#f9e2af'
+
+        # Treeview 樣式
+        self.style.configure('Folder.Treeview',
+                             background=self.bg_secondary,
+                             foreground=self.text,
+                             fieldbackground=self.bg_secondary,
+                             borderwidth=0,
+                             font=('Segoe UI', 10))
+        self.style.configure('Folder.Treeview.Heading',
+                             background=self.bg_surface,
+                             foreground=self.text,
+                             font=('Segoe UI', 10, 'bold'))
+        self.style.map('Folder.Treeview',
+                       background=[('selected', self.accent)],
+                       foreground=[('selected', '#1e1e2e')])
+
+        self.style.configure('File.Treeview',
+                             background=self.bg_secondary,
+                             foreground=self.text,
+                             fieldbackground=self.bg_secondary,
+                             borderwidth=0,
+                             font=('Consolas', 9))
+        self.style.configure('File.Treeview.Heading',
+                             background=self.bg_surface,
+                             foreground=self.text,
+                             font=('Segoe UI', 9, 'bold'))
+        self.style.map('File.Treeview',
+                       background=[('selected', self.accent)],
+                       foreground=[('selected', '#1e1e2e')])
+
+        # Button 樣式
+        self.style.configure('Action.TButton',
+                             background=self.bg_surface,
+                             foreground=self.text,
+                             font=('Segoe UI', 9),
+                             padding=(8, 4))
+        self.style.map('Action.TButton',
+                       background=[('active', self.accent)])
+
+        self.style.configure('Danger.TButton',
+                             background='#45475a',
+                             foreground=self.red,
+                             font=('Segoe UI', 9),
+                             padding=(8, 4))
+
+    def _build_ui(self):
+        """構建 UI"""
+        # 頂部工具欄
+        toolbar = tk.Frame(self.root, bg=self.bg, height=40)
+        toolbar.pack(fill=tk.X, padx=8, pady=(8, 0))
+
+        title_lbl = tk.Label(toolbar, text="Portfolio Manager",
+                             fg=self.accent, bg=self.bg,
+                             font=('Segoe UI', 14, 'bold'))
+        title_lbl.pack(side=tk.LEFT, padx=4)
+
+        # 工具欄按鈕 (右側)
+        btn_frame = tk.Frame(toolbar, bg=self.bg)
+        btn_frame.pack(side=tk.RIGHT)
+
+        ttk.Button(btn_frame, text="Export JSON", style='Action.TButton',
+                   command=self._export_json).pack(side=tk.RIGHT, padx=2)
+        ttk.Button(btn_frame, text="Refresh", style='Action.TButton',
+                   command=self._refresh_all).pack(side=tk.RIGHT, padx=2)
+
+        # 主面板 (PanedWindow)
+        paned = tk.PanedWindow(self.root, orient=tk.HORIZONTAL,
+                               bg=self.bg, sashwidth=4, sashrelief=tk.FLAT)
+        paned.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
+
+        # ====== 左側：資料夾面板 ======
+        left_frame = tk.Frame(paned, bg=self.bg_secondary)
+        paned.add(left_frame, width=300, minsize=200)
+
+        # 資料夾工具欄
+        folder_toolbar = tk.Frame(left_frame, bg=self.bg_secondary)
+        folder_toolbar.pack(fill=tk.X, padx=4, pady=4)
+
+        tk.Label(folder_toolbar, text="Folders", fg=self.text,
+                 bg=self.bg_secondary, font=('Segoe UI', 11, 'bold')).pack(side=tk.LEFT, padx=4)
+
+        ttk.Button(folder_toolbar, text="+", style='Action.TButton', width=3,
+                   command=self._create_folder).pack(side=tk.RIGHT, padx=1)
+        ttk.Button(folder_toolbar, text="Ren", style='Action.TButton', width=4,
+                   command=self._rename_folder).pack(side=tk.RIGHT, padx=1)
+        ttk.Button(folder_toolbar, text="Del", style='Danger.TButton', width=4,
+                   command=self._delete_folder).pack(side=tk.RIGHT, padx=1)
+
+        # 資料夾列表
+        self.folder_tree = ttk.Treeview(
+            left_frame, columns=('files', 'updated'),
+            show='tree headings', style='Folder.Treeview'
+        )
+        self.folder_tree.heading('#0', text='Name')
+        self.folder_tree.heading('files', text='Files')
+        self.folder_tree.heading('updated', text='Updated')
+        self.folder_tree.column('#0', width=150, minwidth=100)
+        self.folder_tree.column('files', width=50, minwidth=40, anchor='center')
+        self.folder_tree.column('updated', width=90, minwidth=70)
+        self.folder_tree.pack(fill=tk.BOTH, expand=True, padx=4, pady=(0, 4))
+        self.folder_tree.bind('<<TreeviewSelect>>', self._on_folder_select)
+
+        # ====== 右側：文件面板 ======
+        right_frame = tk.Frame(paned, bg=self.bg_secondary)
+        paned.add(right_frame, minsize=300)
+
+        # 文件工具欄
+        file_toolbar = tk.Frame(right_frame, bg=self.bg_secondary)
+        file_toolbar.pack(fill=tk.X, padx=4, pady=4)
+
+        self.file_title = tk.Label(file_toolbar, text="Select a folder",
+                                   fg=self.text, bg=self.bg_secondary,
+                                   font=('Segoe UI', 11, 'bold'))
+        self.file_title.pack(side=tk.LEFT, padx=4)
+
+        ttk.Button(file_toolbar, text="Delete File", style='Danger.TButton',
+                   command=self._delete_file).pack(side=tk.RIGHT, padx=1)
+        ttk.Button(file_toolbar, text="Move File", style='Action.TButton',
+                   command=self._move_file).pack(side=tk.RIGHT, padx=1)
+
+        # 文件列表
+        self.file_tree = ttk.Treeview(
+            right_frame,
+            columns=('branch', 'path', 'commit', 'time'),
+            show='headings', style='File.Treeview'
+        )
+        self.file_tree.heading('branch', text='Branch')
+        self.file_tree.heading('path', text='File Path')
+        self.file_tree.heading('commit', text='Commit')
+        self.file_tree.heading('time', text='Time')
+        self.file_tree.column('branch', width=80, minwidth=60)
+        self.file_tree.column('path', width=200, minwidth=120)
+        self.file_tree.column('commit', width=200, minwidth=100)
+        self.file_tree.column('time', width=140, minwidth=100)
+
+        # 滾動條
+        file_scroll = ttk.Scrollbar(right_frame, orient=tk.VERTICAL,
+                                    command=self.file_tree.yview)
+        self.file_tree.configure(yscrollcommand=file_scroll.set)
+
+        self.file_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(4, 0), pady=(0, 4))
+        file_scroll.pack(side=tk.RIGHT, fill=tk.Y, padx=(0, 4), pady=(0, 4))
+
+        # 底部狀態欄
+        status_bar = tk.Frame(self.root, bg=self.bg_surface, height=24)
+        status_bar.pack(fill=tk.X)
+
+        self.status_label = tk.Label(status_bar, text="Ready",
+                                     fg=self.text_secondary, bg=self.bg_surface,
+                                     font=('Segoe UI', 8), anchor='w')
+        self.status_label.pack(fill=tk.X, padx=8, pady=2)
+
+    # =========================================================================
+    # 資料夾操作
+    # =========================================================================
+
+    def _refresh_folders(self):
+        """刷新資料夾列表"""
+        self.folder_tree.delete(*self.folder_tree.get_children())
+        folders = self.db.get_all_folders()
+        for f in folders:
+            updated = f.get('last_file_update') or f.get('updated_at') or ''
+            if updated:
+                try:
+                    dt = datetime.fromisoformat(updated)
+                    updated = dt.strftime('%m/%d %H:%M')
+                except (ValueError, TypeError):
+                    updated = str(updated)[:10]
+
+            self.folder_tree.insert('', tk.END, iid=str(f['id']),
+                                    text=f['name'],
+                                    values=(f.get('file_count', 0), updated))
+
+        self._set_status(f"{len(folders)} folders")
+
+    def _refresh_all(self):
+        """刷新全部"""
+        self._refresh_folders()
+        # 清空文件面板
+        self.file_tree.delete(*self.file_tree.get_children())
+        self.file_title.config(text="Select a folder")
+
+    def _on_folder_select(self, event):
+        """選中資料夾時，顯示其中的文件"""
+        sel = self.folder_tree.selection()
+        if not sel:
+            return
+        folder_id = int(sel[0])
+        folder = self.db.get_folder_by_id(folder_id)
+        if folder:
+            self.file_title.config(text=f"{folder['name']}")
+            self._refresh_files(folder_id)
+
+    def _refresh_files(self, folder_id: int):
+        """刷新文件列表"""
+        self.file_tree.delete(*self.file_tree.get_children())
+        files = self.db.get_files_in_folder(folder_id)
+        for f in files:
+            commit_msg = (f['commit_name'] or '')[:50]
+            commit_time = ''
+            if f.get('commit_time'):
+                try:
+                    dt = datetime.fromisoformat(f['commit_time'].replace(' ', 'T').split('+')[0])
+                    commit_time = dt.strftime('%Y-%m-%d %H:%M')
+                except (ValueError, TypeError):
+                    commit_time = str(f['commit_time'])[:16]
+
+            self.file_tree.insert('', tk.END, iid=str(f['id']),
+                                  values=(f['branch'], f['file_path'],
+                                          commit_msg, commit_time))
+
+        self._set_status(f"{len(files)} files in folder")
+
+    def _create_folder(self):
+        """創建新資料夾"""
+        name = simpledialog.askstring("Create Folder", "Folder name:",
+                                      parent=self.root)
+        if name and name.strip():
+            fid = self.db.create_folder(name.strip())
+            if fid > 0:
+                self._refresh_folders()
+                self._set_status(f"Created folder: {name.strip()}")
+            else:
+                messagebox.showwarning("Warning", "Folder already exists!")
+
+    def _rename_folder(self):
+        """重命名資料夾"""
+        sel = self.folder_tree.selection()
+        if not sel:
+            messagebox.showinfo("Info", "Select a folder first")
+            return
+
+        folder_id = int(sel[0])
+        folder = self.db.get_folder_by_id(folder_id)
+        if not folder:
+            return
+
+        new_name = simpledialog.askstring("Rename Folder",
+                                          f"Rename '{folder['name']}' to:",
+                                          parent=self.root,
+                                          initialvalue=folder['name'])
+        if new_name and new_name.strip():
+            if self.db.rename_folder(folder_id, new_name.strip()):
+                self._refresh_folders()
+                self._set_status(f"Renamed to: {new_name.strip()}")
+            else:
+                messagebox.showwarning("Warning", "Name already exists!")
+
+    def _delete_folder(self):
+        """刪除資料夾"""
+        sel = self.folder_tree.selection()
+        if not sel:
+            messagebox.showinfo("Info", "Select a folder first")
+            return
+
+        folder_id = int(sel[0])
+        folder = self.db.get_folder_by_id(folder_id)
+        if not folder:
+            return
+
+        files = self.db.get_files_in_folder(folder_id)
+        msg = f"Delete folder '{folder['name']}'?"
+        if files:
+            msg += f"\n\nThis will also delete {len(files)} files and their static code!"
+
+        if messagebox.askyesno("Confirm Delete", msg, icon='warning'):
+            self.db.delete_folder(folder_id, delete_files=True)
+            self._refresh_all()
+            self._set_status(f"Deleted folder: {folder['name']}")
+
+    # =========================================================================
+    # 文件操作
+    # =========================================================================
+
+    def _delete_file(self):
+        """刪除文件"""
+        sel = self.file_tree.selection()
+        if not sel:
+            messagebox.showinfo("Info", "Select a file first")
+            return
+
+        file_id = int(sel[0])
+        values = self.file_tree.item(sel[0], 'values')
+        file_path = values[1] if values else 'unknown'
+
+        if messagebox.askyesno("Confirm Delete",
+                               f"Delete '{file_path}'?\nThis removes the DB record and static code."):
+            self.db.delete_file(file_id)
+            # 刷新當前資料夾
+            folder_sel = self.folder_tree.selection()
+            if folder_sel:
+                self._refresh_files(int(folder_sel[0]))
+                self._refresh_folders()
+            self._set_status(f"Deleted: {file_path}")
+
+    def _move_file(self):
+        """移動文件到另一個資料夾"""
+        sel = self.file_tree.selection()
+        if not sel:
+            messagebox.showinfo("Info", "Select a file first")
+            return
+
+        file_id = int(sel[0])
+
+        # 獲取所有資料夾
+        folders = self.db.get_all_folders()
+        if len(folders) < 2:
+            messagebox.showinfo("Info", "Need at least 2 folders to move files.")
+            return
+
+        # 簡單的移動對話框
+        move_win = tk.Toplevel(self.root)
+        move_win.title("Move File")
+        move_win.geometry("300x350")
+        move_win.configure(bg=self.bg)
+        move_win.transient(self.root)
+        move_win.grab_set()
+
+        tk.Label(move_win, text="Move to folder:", fg=self.text, bg=self.bg,
+                 font=('Segoe UI', 11, 'bold')).pack(pady=(12, 8))
+
+        listbox = tk.Listbox(move_win, bg=self.bg_secondary, fg=self.text,
+                             selectbackground=self.accent,
+                             selectforeground=self.bg,
+                             font=('Segoe UI', 10), borderwidth=0,
+                             highlightthickness=0)
+        listbox.pack(fill=tk.BOTH, expand=True, padx=12, pady=4)
+
+        folder_ids = []
+        current_folder = self.folder_tree.selection()
+        for f in folders:
+            if current_folder and str(f['id']) == current_folder[0]:
+                continue  # 不列出當前資料夾
+            listbox.insert(tk.END, f['name'])
+            folder_ids.append(f['id'])
+
+        def do_move():
+            idx = listbox.curselection()
+            if not idx:
+                messagebox.showinfo("Info", "Select a target folder")
+                return
+            target_id = folder_ids[idx[0]]
+            if self.db.move_file(file_id, target_id):
+                move_win.destroy()
+                if current_folder:
+                    self._refresh_files(int(current_folder[0]))
+                self._refresh_folders()
+                self._set_status("File moved successfully")
+            else:
+                messagebox.showwarning("Error", "Move failed. Duplicate name in target folder?")
+
+        ttk.Button(move_win, text="Move", style='Action.TButton',
+                   command=do_move).pack(pady=8)
+
+    # =========================================================================
+    # 工具
+    # =========================================================================
+
+    def _export_json(self):
+        """導出 JSON"""
+        path = self.db.export_portfolio_json()
+        self._set_status(f"Exported: {os.path.basename(path)}")
+        messagebox.showinfo("Export Complete",
+                            f"Exported to:\n{path}")
+
+    def _set_status(self, text: str):
+        """設置狀態欄文字"""
+        self.status_label.config(text=text)
+
+    def run(self):
+        """運行 GUI"""
+        self.root.mainloop()
+
+
+# =============================================================================
+# Entry Point
+# =============================================================================
+
 if __name__ == "__main__":
     repo_path = sys.argv[1] if len(sys.argv) > 1 else None
-    analyzer = CommitAnalyzer(repo_path=repo_path)
-    analyzer.run()
+    manager = PortfolioManager(repo_path=repo_path)
+    manager.run()
