@@ -241,15 +241,11 @@ class PortfolioManager:
                             'message': parts[2]
                         })
 
-        # 獲取變更的文件列表
-        diff_output = self.run_git(f"git diff --name-only {start}^..{end}")
-        if not diff_output:
-            diff_output = self.run_git(f"git diff-tree --no-commit-id --name-only -r {start}")
-        if not diff_output and start != end:
-            # 嘗試 log 方式
-            diff_output = self.run_git(
-                f"git log --name-only --format='' {start}^..{end}"
-            )
+        # 獲取變更的文件列表: 收集範圍內每個 commit 變更的文件聯集
+        diff_output = self.run_git(f"git log --name-only --format='' {start}^..{end}")
+        if diff_output is None:
+            # 處理 start 為 root commit 導致 start^ 報錯的情況
+            diff_output = self.run_git(f"git log --name-only --format='' {end}")
 
         if not diff_output:
             self.log('warning', 'No changed files found')
