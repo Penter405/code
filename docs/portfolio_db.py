@@ -483,7 +483,8 @@ class PortfolioDB:
             result = subprocess.run(
                 f'git show origin/{branch}:{file_path}',
                 shell=True, cwd=repo_path,
-                capture_output=True, text=True, check=True
+                capture_output=True, text=True, check=True,
+                encoding='utf-8', errors='replace'
             )
             return result.stdout
         except subprocess.CalledProcessError:
@@ -492,7 +493,8 @@ class PortfolioDB:
                 result = subprocess.run(
                     f'git show {branch}:{file_path}',
                     shell=True, cwd=repo_path,
-                    capture_output=True, text=True, check=True
+                    capture_output=True, text=True, check=True,
+                    encoding='utf-8', errors='replace'
                 )
                 return result.stdout
             except subprocess.CalledProcessError:

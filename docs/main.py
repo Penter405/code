@@ -73,19 +73,20 @@ class PortfolioManager:
             'error': f"{Colors.RED}[ERR] {message}{Colors.ENDC}",
             'section': f"\n{Colors.BOLD}{Colors.CYAN}{'='*60}\n  {message}\n{'='*60}{Colors.ENDC}",
         }
-        print(levels.get(level, message))
+        print(levels.get(level, message), flush=True)
 
-    def run_git(self, command: str) -> str:
+    def run_git(self, command: str) -> Optional[str]:
         """執行 Git 命令"""
         try:
             result = subprocess.run(
                 command, shell=True, cwd=self.repo_path,
-                capture_output=True, text=True, check=True
+                capture_output=True, text=True, check=True,
+                encoding='utf-8', errors='replace'
             )
             return result.stdout.strip()
         except subprocess.CalledProcessError as e:
             self.log('error', f"Git error: {e.stderr.strip()}")
-            return ""
+            return None
 
     # =========================================================================
     # Step 0: 選擇分支
@@ -136,6 +137,18 @@ class PortfolioManager:
                 return None
 
         self.log('success', f'Analyzing branch: {selected}')
+
+        pull_choice = input(f"{Colors.CYAN}Do you want to pull the latest changes for '{selected}' first? (y/n) [n]: {Colors.ENDC}").strip().lower()
+        if pull_choice in ['y', 'yes']:
+            self.log('info', f"Pulling latest changes for {selected}...")
+            if current == selected:
+                if self.run_git(f'git pull origin {selected}') is None:
+                    return None
+            else:
+                if self.run_git(f'git fetch origin {selected}:{selected}') is None:
+                    return None
+            self.log('success', f'Successfully pulled {selected}')
+
         return selected
 
     # =========================================================================
@@ -413,7 +426,7 @@ class PortfolioManager:
             print(f"  2. Open folder management GUI")
             print(f"  3. Export portfolio_data.json only")
 
-            choice = input(f"\n{Colors.CYAN}Choice {Colors.GRAY}[default: 2]{Colors.CYAN}: {Colors.ENDC}").strip() or "2"
+            choice = input(f"\n{Colors.CYAN}Choice {Colors.GRAY}[default: 1]{Colors.CYAN}: {Colors.ENDC}").strip() or "1"
 
             if choice == "1":
                 self._run_full_workflow()
@@ -440,30 +453,11 @@ class PortfolioManager:
         if not branch:
             return
 
-        result = self.step_commit_range(branch)
-        if not result:
-            return
-        start, end = result
-
-        files = self.step_get_changed_files(branch, start, end)
-        if not files:
-            return
-
-        folder_id = self.step_select_folder()
-        if not folder_id:
-            return
-
-        self.step_save_files(files, folder_id, branch)
-        self.step_export_json()
-
-        print(f"\n{Colors.BOLD}{Colors.GREEN}{'='*60}")
-        print(f"  Done! Opening GUI...")
-        print(f"{'='*60}{Colors.ENDC}\n")
-
         self._open_gui()
 
     def _open_gui(self):
         """打開 tkinter GUI"""
+        self.log('section', 'Opening GUI')
         gui = PortfolioGUI(self.db, self)
         gui.run()
 
@@ -944,7 +938,7 @@ class PortfolioGUI:
         button_row.pack(fill=tk.X, padx=18, pady=(4, 16))
 
         def git_output(args):
-            result = subprocess.run(args, cwd=self.manager.repo_path, capture_output=True, text=True)
+            result = subprocess.run(args, cwd=self.manager.repo_path, capture_output=True, text=True, encoding='utf-8', errors='replace')
             return result.stdout.strip() if result.returncode == 0 else ''
 
         def branch_ref(branch):
@@ -1033,7 +1027,7 @@ class PortfolioGUI:
         if not self.manager:
             return []
         result = subprocess.run(['git', 'branch', '-a', '--format=%(refname:short)'], cwd=self.manager.repo_path,
-                                capture_output=True, text=True)
+                                capture_output=True, text=True, encoding='utf-8', errors='replace')
         branches = set()
         for name in result.stdout.splitlines():
             name = name.strip()
