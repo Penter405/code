@@ -1,2 +1,1 @@
-print(dir(list))
-print(help(list.remove))
+print(dir(set))
