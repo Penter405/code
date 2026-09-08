@@ -933,13 +933,32 @@
             const list = document.getElementById('chaptersList');
             list.innerHTML = '';
 
+            // Build hierarchy
+            const byId = {};
+            const roots = [];
+
+            // First pass: map nodes and setup children array
             data.forEach(item => {
+                byId[item.id] = item;
+                item.children = [];
+            });
+
+            // Second pass: attach to parents or roots
+            data.forEach(item => {
+                if (item.parent_id && byId[item.parent_id]) {
+                    byId[item.parent_id].children.push(item);
+                } else {
+                    roots.push(item);
+                }
+            });
+
+            function renderItem(item) {
                 const date = item.latest_commit_time ? new Date(item.latest_commit_time).toLocaleString('en-US', {
                     month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
                 }) : 'No saved files';
 
-                const html = `
-                    <div class="chapter-card" onclick="openChapter('${item.analysis_id}')">
+                let html = `
+                    <div class="chapter-card" onclick="event.stopPropagation(); openChapter('${item.analysis_id}')">
                         <div class="chapter-header">
                             <div class="chapter-title">
                                 <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path fill-rule="evenodd" d="M1.5 14.25c0 .138.112.25.25.25H4v-1.25a.75.75 0 01.75-.75h2.5a.75.75 0 01.75.75v1.25h2.25a.25.25 0 00.25-.25V1.75a.25.25 0 00-.25-.25h-8.5a.25.25 0 00-.25.25v12.5zM1.75 0h8.5C11.216 0 12 .784 12 1.75v12.5A1.75 1.75 0 0110.25 16h-8.5A1.75 1.75 0 010 14.25V1.75C0 .784.784 0 1.75 0zM3 3.25c0-.138.112-.25.25-.25h2.5a.25.25 0 01.25.25v1.5a.25.25 0 01-.25.25h-2.5a.25.25 0 01-.25-.25v-1.5zm0 4c0-.138.112-.25.25-.25h2.5a.25.25 0 01.25.25v1.5a.25.25 0 01-.25.25h-2.5a.25.25 0 01-.25-.25v-1.5z"></path></svg>
@@ -960,7 +979,20 @@
                         </div>
                     </div>
                 `;
-                list.insertAdjacentHTML('beforeend', html);
+
+                if (item.children && item.children.length > 0) {
+                    html += `<div class="timeline" style="margin-top: -12px; margin-bottom: 24px; padding-left: 40px;">`;
+                    item.children.forEach(child => {
+                        html += renderItem(child);
+                    });
+                    html += `</div>`;
+                }
+
+                return html;
+            }
+
+            roots.forEach(root => {
+                list.insertAdjacentHTML('beforeend', renderItem(root));
             });
         }
 

@@ -1,8 +1,8 @@
 {
   "meta": {
     "repo": "Penter405/code",
-    "last_updated": "2026-09-08T09:17:55.349959",
-    "total_folders": 7,
+    "last_updated": "2026-09-08T09:20:41.329453",
+    "total_folders": 4,
     "total_files": 15
   },
   "folders": [
@@ -245,33 +245,6 @@
           "updated_at": "2026-09-08 01:10:54"
         }
       ]
-    },
-    {
-      "id": 9,
-      "name": "b4",
-      "parent_id": 6,
-      "created_at": "2026-09-08 01:10:27",
-      "updated_at": "2026-09-08 01:10:27",
-      "file_count": 0,
-      "files": []
-    },
-    {
-      "id": 8,
-      "name": "buffer2",
-      "parent_id": null,
-      "created_at": "2026-09-08 00:56:29",
-      "updated_at": "2026-09-08 00:56:29",
-      "file_count": 0,
-      "files": []
-    },
-    {
-      "id": 6,
-      "name": "buffer",
-      "parent_id": null,
-      "created_at": "2026-09-08 00:56:12",
-      "updated_at": "2026-09-08 00:56:12",
-      "file_count": 0,
-      "files": []
     },
     {
       "id": 2,
