@@ -1,3 +1,4 @@
+#attempted by did not cheak cycle
 import heapq
 class Solution:
     def minCostConnectPoints(self, points: list[list[int]]) -> int:
