@@ -212,64 +212,66 @@ class PortfolioManager:
     # Step 2: 獲取變更文件
     # =========================================================================
 
+    def cheak_git_diff_include_any_change_of_a_file_with_last_commit_of_ob(self, start: str, end: str) -> List[Dict]:
+        """獲取在 start..end 範圍內有變更的文件，並附帶該文件在範圍內的最後一次提交信息。"""
+        if start == end:
+            range_arg = f"-1 {end}"
+        else:
+            range_arg = f"{start}^^..{end}"
+            
+        log_out = self.run_git(f'git log --name-only --format="COMMIT|%H|%ai|%s" {range_arg}')
+        if log_out is None and start != end:
+            # 處理 start 為 root commit 導致 start^ 報錯的情況
+            log_out = self.run_git(f'git log --name-only --format="COMMIT|%H|%ai|%s" {end}')
+            
+        if not log_out:
+            return []
+
+        file_map = {}
+        current_commit = None
+
+        for line in log_out.split('\n'):
+            line = line.strip().strip("'")
+            if not line:
+                continue
+            
+            if line.startswith('COMMIT|'):
+                parts = line.split('|', 3)
+                if len(parts) >= 4:
+                    current_commit = {
+                        'hash': parts[1],
+                        'date': parts[2],
+                        'message': parts[3]
+                    }
+            elif current_commit:
+                file_path = line
+                # 由於 git log 是由新到舊，第一次遇到的文件即為該文件在範圍內的最後一次修改
+                if file_path not in file_map:
+                    file_map[file_path] = {
+                        'file_path': file_path,
+                        'file_name': os.path.basename(file_path),
+                        'commit_hash': current_commit['hash'],
+                        'commit_time': current_commit['date'],
+                        'commit_name': current_commit['message'],
+                    }
+                    
+        return list(file_map.values())
+
     def step_get_changed_files(self, branch: str, start: str, end: str) -> List[Dict]:
         """獲取變更文件列表"""
         self.log('section', 'Step 2: Scanning Changed Files')
 
-        # Both selected commits are included: compare the parent of start to end.
-        # For a root commit, ``start^`` does not exist, so diff-tree is used.
-        commits_out = self.run_git(
-            f"git log --format='%H|%ai|%s' {start}^..{end}"
-        )
-
-        # 如果用的是相同 commit，至少包含 end commit 自身
-        if not commits_out and start == end:
-            commits_out = self.run_git(
-                f"git log --format='%H|%ai|%s' -1 {end}"
-            )
-
-        commit_list = []
-        if commits_out:
-            for line in commits_out.split('\n'):
-                line = line.strip().strip("'")
-                if line:
-                    parts = line.split('|', 2)
-                    if len(parts) == 3:
-                        commit_list.append({
-                            'hash': parts[0],
-                            'date': parts[1],
-                            'message': parts[2]
-                        })
-
-        # 獲取變更的文件列表: 收集範圍內每個 commit 變更的文件聯集
-        diff_output = self.run_git(f"git log --name-only --format='' {start}^..{end}")
-        if diff_output is None:
-            # 處理 start 為 root commit 導致 start^ 報錯的情況
-            diff_output = self.run_git(f"git log --name-only --format='' {end}")
-
-        if not diff_output:
+        results = self.cheak_git_diff_include_any_change_of_a_file_with_last_commit_of_ob(start, end)
+        
+        if not results:
             self.log('warning', 'No changed files found')
             return []
 
-        # 去重
-        files = list(set(f.strip() for f in diff_output.split('\n') if f.strip()))
-        
-        self.log('success', f'Found {len(files)} changed files')
-        for f in files:
-            print(f"  {Colors.CYAN}* {f}{Colors.ENDC}")
+        self.log('success', f'Found {len(results)} changed files')
+        for f in results:
+            print(f"  {Colors.CYAN}* {f['file_path']} ({f['commit_hash'][:7]}){Colors.ENDC}")
 
-        # 獲取最後一個提交的信息
-        last_commit = commit_list[0] if commit_list else {
-            'hash': end[:7], 'date': datetime.now().isoformat(), 'message': 'unknown'
-        }
-
-        return [{
-            'file_path': f,
-            'file_name': os.path.basename(f),
-            'commit_hash': last_commit['hash'],
-            'commit_time': last_commit['date'],
-            'commit_name': last_commit['message'],
-        } for f in files]
+        return results
 
     # =========================================================================
     # Step 3: 選擇章節/資料夾
@@ -582,6 +584,8 @@ class PortfolioGUI:
                    command=self._rename_folder).pack(side=tk.RIGHT, padx=1)
         ttk.Button(folder_toolbar, text="Del", style='Danger.TButton', width=4,
                    command=self._delete_folder).pack(side=tk.RIGHT, padx=1)
+        ttk.Button(folder_toolbar, text="\u2192 Buf", style='Action.TButton', width=5,
+                   command=self._send_folder_to_buffer).pack(side=tk.RIGHT, padx=1)
 
         # 資料夾列表
         self.folder_tree = ttk.Treeview(
@@ -596,6 +600,7 @@ class PortfolioGUI:
         self.folder_tree.column('updated', width=90, minwidth=70)
         self.folder_tree.pack(fill=tk.BOTH, expand=True, padx=4, pady=(0, 4))
         self.folder_tree.bind('<<TreeviewSelect>>', self._on_folder_select)
+        self.folder_tree.bind('<Button-1>', self._on_folder_click_deselect)
 
         # ====== 中間：選中資料夾的子資料夾與文件 ======
         right_frame = tk.Frame(paned, bg=self.bg_secondary)
@@ -712,6 +717,15 @@ class PortfolioGUI:
         self.file_tree.delete(*self.file_tree.get_children())
         self.file_title.config(text="Select a folder")
 
+    def _on_folder_click_deselect(self, event):
+        """Click on empty space in folder tree → deselect so '+' creates a root folder."""
+        item = self.folder_tree.identify_row(event.y)
+        if not item:
+            self.folder_tree.selection_remove(*self.folder_tree.selection())
+            self.file_tree.delete(*self.file_tree.get_children())
+            self.file_title.config(text="Select a folder")
+            self._set_status("Selection cleared (new folders will be created at root)")
+
     def _on_folder_select(self, event):
         """選中資料夾時，顯示其中的文件"""
         sel = self.folder_tree.selection()
@@ -722,6 +736,33 @@ class PortfolioGUI:
         if folder:
             self.file_title.config(text=f"{folder['name']}")
             self._refresh_files(folder_id)
+
+    def _send_folder_to_buffer(self):
+        """Send all files from the selected folder to the buffer for reorganization."""
+        sel = self.folder_tree.selection()
+        if not sel:
+            messagebox.showinfo("Info", "Select a folder first", parent=self.root)
+            return
+        folder_id = int(sel[0])
+        folder = self.db.get_folder_by_id(folder_id)
+        if not folder:
+            return
+        files = self.db.get_files_in_folder(folder_id)
+        if not files:
+            messagebox.showinfo("Info", f"Folder '{folder['name']}' has no files.", parent=self.root)
+            return
+        for f in files:
+            key = f"buffer-{len(self.buffer_files)}"
+            self.buffer_files[key] = {
+                'file_path': f['file_path'],
+                'file_name': f['file_name'],
+                'commit_hash': f.get('commit_hash', ''),
+                'commit_time': f.get('commit_time', ''),
+                'commit_name': f.get('commit_name', ''),
+                'branch': f['branch'],
+            }
+            self.buffer_tree.insert('', tk.END, iid=key, values=(f['branch'], f['file_path']))
+        self._set_status(f"{len(files)} files from '{folder['name']}' added to buffer")
 
     def _create_folder(self):
         """創建新資料夾"""
