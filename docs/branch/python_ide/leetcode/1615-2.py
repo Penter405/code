@@ -1,8 +1,10 @@
 ﻿"""
-failed degree that pretend that max value one(if we have many max value node) will be the answer (see row 31)
-see more info in 1615-2.py
-"""
+but i think degree is legical, howit wrong?  
+10 and 10 with connected, result is 19, and 10 with 10 inconnected, 
+will be 10+10 20, but 10 we take first would be the first situation one, 
+so we could get wrong result
 
+"""
 from collections import defaultdict
 class Solution:
     def maximalNetworkRank(self, n: int, roads) -> int:
@@ -24,22 +26,15 @@ class Solution:
         for a,b in roads:
             point[a].append(b)
             point[b].append(a)
-        top=-1
-        guy1=-1
-        got=-1
-        got2=-1
-        for me in point.keys():#fail degree
-            if len(point[me])>got:
-                guy1=me
-                got=len(point[me])
-        for me in point.keys():
-            if me==guy1:#there is a statu that two point same value
-                continue
-            if len(point[me])>got2:
-                if guy1 in point[me]:
-                    top=max(top,got+len(point[me])-1)
+        top=0
+        for a in point.keys():
+            for b in point.keys():
+                if a==b:
+                    continue
+                if b in point[a]:
+                    top=max(top,len(point[a])+len(point[b])-1)
                 else:
-                    top=max(top,got+len(point[me]))
+                    top=max(top,len(point[a])+len(point[b]))
         return top
 
 penter=Solution()

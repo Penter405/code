@@ -37,4 +37,3 @@ class Solution:
         for node in range(n):
             result+=make(node)
         return result
-
