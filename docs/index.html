@@ -1138,7 +1138,7 @@
             try {
                 // Try API first to avoid CORS
                 let content = '';
-                if (fileId && Object.prototype.hasOwnProperty.call(staticCodeById, fileId)) {
+                if (fileId && Object.prototype.hasOwnProperty.call(staticCodeById, fileId) && staticCodeById[fileId]) {
                     content = staticCodeById[fileId];
                 } else {
                 try {
