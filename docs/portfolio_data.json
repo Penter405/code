@@ -1,11 +1,45 @@
 {
   "meta": {
     "repo": "Penter405/code",
-    "last_updated": "2026-09-10T18:48:57.222549",
-    "total_folders": 6,
-    "total_files": 25
+    "last_updated": "2026-09-12T16:17:34.779340",
+    "total_folders": 8,
+    "total_files": 26
   },
   "folders": [
+    {
+      "id": 19,
+      "name": "backtracking",
+      "parent_id": 18,
+      "created_at": "2026-09-12 08:17:08",
+      "updated_at": "2026-09-12T16:17:32.228210",
+      "file_count": 1,
+      "files": [
+        {
+          "id": 112,
+          "file_name": "51.py",
+          "display_name": null,
+          "commit_time": "2026-09-12 16:08:02 +0800",
+          "commit_name": "backtracking train ,leetcode 51",
+          "github_url": "https://github.com/Penter405/code/blob/python_ide/leetcode/51.py",
+          "raw_github_url": "https://raw.githubusercontent.com/Penter405/code/python_ide/leetcode/51.py",
+          "branch": "python_ide",
+          "file_path": "leetcode/51.py",
+          "language": "python",
+          "static_path": "branch/python_ide/leetcode/51.py",
+          "created_at": "2026-09-12 08:17:32",
+          "updated_at": "2026-09-12 08:17:32"
+        }
+      ]
+    },
+    {
+      "id": 18,
+      "name": "recursion",
+      "parent_id": null,
+      "created_at": "2026-09-12 08:17:00",
+      "updated_at": "2026-09-12 08:17:00",
+      "file_count": 0,
+      "files": []
+    },
     {
       "id": 17,
       "name": "AOV 括樸",
