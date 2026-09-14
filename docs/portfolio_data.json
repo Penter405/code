@@ -1,11 +1,54 @@
 {
   "meta": {
     "repo": "Penter405/code",
-    "last_updated": "2026-09-12T16:17:34.779340",
-    "total_folders": 8,
-    "total_files": 26
+    "last_updated": "2026-09-14T21:24:29.137028",
+    "total_folders": 11,
+    "total_files": 27
   },
   "folders": [
+    {
+      "id": 22,
+      "name": "Largest Increasing Sequence",
+      "parent_id": 20,
+      "created_at": "2026-09-14 13:24:21",
+      "updated_at": "2026-09-14 13:24:21",
+      "file_count": 0,
+      "files": []
+    },
+    {
+      "id": 21,
+      "name": "take or skip",
+      "parent_id": 20,
+      "created_at": "2026-09-14 13:23:41",
+      "updated_at": "2026-09-14T21:24:01.711636",
+      "file_count": 1,
+      "files": [
+        {
+          "id": 113,
+          "file_name": "198.cpp",
+          "display_name": null,
+          "commit_time": "2026-09-14 19:22:29 +0800",
+          "commit_name": "DP train , leetcode 198.cpp",
+          "github_url": "https://github.com/Penter405/code/blob/cpp_ide/leetcode/198.cpp",
+          "raw_github_url": "https://raw.githubusercontent.com/Penter405/code/cpp_ide/leetcode/198.cpp",
+          "branch": "cpp_ide",
+          "file_path": "leetcode/198.cpp",
+          "language": "cpp",
+          "static_path": "branch/cpp_ide/leetcode/198.cpp",
+          "created_at": "2026-09-14 13:24:01",
+          "updated_at": "2026-09-14 13:24:01"
+        }
+      ]
+    },
+    {
+      "id": 20,
+      "name": "Dynamic Programming",
+      "parent_id": null,
+      "created_at": "2026-09-14 13:23:27",
+      "updated_at": "2026-09-14 13:23:27",
+      "file_count": 0,
+      "files": []
+    },
     {
       "id": 19,
       "name": "backtracking",
