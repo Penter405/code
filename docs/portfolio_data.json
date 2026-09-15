@@ -1,9 +1,9 @@
 {
   "meta": {
     "repo": "Penter405/code",
-    "last_updated": "2026-09-14T21:24:29.137028",
+    "last_updated": "2026-09-15T09:20:08.333244",
     "total_folders": 11,
-    "total_files": 27
+    "total_files": 28
   },
   "folders": [
     {
@@ -11,9 +11,25 @@
       "name": "Largest Increasing Sequence",
       "parent_id": 20,
       "created_at": "2026-09-14 13:24:21",
-      "updated_at": "2026-09-14 13:24:21",
-      "file_count": 0,
-      "files": []
+      "updated_at": "2026-09-15T09:20:05.904684",
+      "file_count": 1,
+      "files": [
+        {
+          "id": 114,
+          "file_name": "300.py",
+          "display_name": null,
+          "commit_time": "2026-09-15 09:18:23 +0800",
+          "commit_name": "dp train , leetcode 300.py",
+          "github_url": "https://github.com/Penter405/code/blob/python_ide/leetcode/300.py",
+          "raw_github_url": "https://raw.githubusercontent.com/Penter405/code/python_ide/leetcode/300.py",
+          "branch": "python_ide",
+          "file_path": "leetcode/300.py",
+          "language": "python",
+          "static_path": "branch/python_ide/leetcode/300.py",
+          "created_at": "2026-09-15 01:20:05",
+          "updated_at": "2026-09-15 01:20:05"
+        }
+      ]
     },
     {
       "id": 21,
