@@ -1,22 +1,32 @@
 class Solution:
     def rob(self, nums: list[int]) -> int:
         dp=[nums[0]]
-        rob1=[True]
+        dp2=[nums[-1]]
 
-        for rs in range(1,len(nums)):
+        for rs in range(1,len(nums)-1):
             child=0
-            did_1=False
+
             for index in range(len(dp)-1):
                 if dp[index]>child:
-                    if rs ==len(nums)-1 and rob1[index]:
+                    if rs ==len(nums)-1:
                         continue
-                    did_1=rob1[index]
                     child=dp[index]
             dp.append(child+nums[rs])
-            rob1.append(did_1)
         
+        nums2=nums[::-1]
+        
+        for rs in range(1,len(nums2)-1):
+            child=0
 
-        return max(dp)
+            for index in range(len(dp2)-1):
+                if dp2[index]>child:
+                    if rs ==len(nums2)-1:
+                        continue
+                    child=dp2[index]
+            dp2.append(child+nums2[rs])
+
+
+        return max(max(dp),max(dp2))
 
 
 
