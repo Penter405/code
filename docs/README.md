@@ -1,6 +1,6 @@
 this is a web service that show you how Penter405 solve problem by charpter and time or name and so on(can adjust what you want)
 
-# [URL](https://penter405.github.io/code/)
+
 # 📊 Git 提交變更分析工具
 
 ## 🎯 功能介紹
