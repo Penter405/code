@@ -1,9 +1,9 @@
 {
   "meta": {
     "repo": "Penter405/code",
-    "last_updated": "2026-09-17T12:16:45.642240",
+    "last_updated": "2026-09-17T18:07:08.096794",
     "total_folders": 11,
-    "total_files": 42
+    "total_files": 47
   },
   "folders": [
     {
@@ -36,9 +36,84 @@
       "name": "take or skip",
       "parent_id": 20,
       "created_at": "2026-09-14 13:23:41",
-      "updated_at": "2026-09-17T12:16:38.002664",
-      "file_count": 8,
+      "updated_at": "2026-09-17T18:07:05.724707",
+      "file_count": 13,
       "files": [
+        {
+          "id": 131,
+          "file_name": "1749.py",
+          "display_name": null,
+          "commit_time": "2026-09-17 14:28:55 +0800",
+          "commit_name": "DP train , leetcode 1749",
+          "github_url": "https://github.com/Penter405/code/blob/python_ide/leetcode/1749.py",
+          "raw_github_url": "https://raw.githubusercontent.com/Penter405/code/python_ide/leetcode/1749.py",
+          "branch": "python_ide",
+          "file_path": "leetcode/1749.py",
+          "language": "python",
+          "static_path": "branch/python_ide/leetcode/1749.py",
+          "created_at": "2026-09-17 10:07:05",
+          "updated_at": "2026-09-17 10:07:05"
+        },
+        {
+          "id": 132,
+          "file_name": "2606.py",
+          "display_name": null,
+          "commit_time": "2026-09-17 13:48:16 +0800",
+          "commit_name": "DP train , leetcode 53, 2606",
+          "github_url": "https://github.com/Penter405/code/blob/python_ide/leetcode/2606.py",
+          "raw_github_url": "https://raw.githubusercontent.com/Penter405/code/python_ide/leetcode/2606.py",
+          "branch": "python_ide",
+          "file_path": "leetcode/2606.py",
+          "language": "python",
+          "static_path": "branch/python_ide/leetcode/2606.py",
+          "created_at": "2026-09-17 10:07:05",
+          "updated_at": "2026-09-17 10:07:05"
+        },
+        {
+          "id": 133,
+          "file_name": "53.py",
+          "display_name": null,
+          "commit_time": "2026-09-17 13:48:16 +0800",
+          "commit_name": "DP train , leetcode 53, 2606",
+          "github_url": "https://github.com/Penter405/code/blob/python_ide/leetcode/53.py",
+          "raw_github_url": "https://raw.githubusercontent.com/Penter405/code/python_ide/leetcode/53.py",
+          "branch": "python_ide",
+          "file_path": "leetcode/53.py",
+          "language": "python",
+          "static_path": "branch/python_ide/leetcode/53.py",
+          "created_at": "2026-09-17 10:07:05",
+          "updated_at": "2026-09-17 10:07:05"
+        },
+        {
+          "id": 129,
+          "file_name": "740-2.py",
+          "display_name": null,
+          "commit_time": "2026-09-17 18:00:27 +0800",
+          "commit_name": "DP learn 740-2",
+          "github_url": "https://github.com/Penter405/code/blob/python_ide/leetcode/740-2.py",
+          "raw_github_url": "https://raw.githubusercontent.com/Penter405/code/python_ide/leetcode/740-2.py",
+          "branch": "python_ide",
+          "file_path": "leetcode/740-2.py",
+          "language": "python",
+          "static_path": "branch/python_ide/leetcode/740-2.py",
+          "created_at": "2026-09-17 10:07:04",
+          "updated_at": "2026-09-17 10:07:04"
+        },
+        {
+          "id": 130,
+          "file_name": "1191.py",
+          "display_name": null,
+          "commit_time": "2026-09-17 14:52:52 +0800",
+          "commit_name": "DP train, leetcode 1191 , did not finish",
+          "github_url": "https://github.com/Penter405/code/blob/python_ide/leetcode/1191.py",
+          "raw_github_url": "https://raw.githubusercontent.com/Penter405/code/python_ide/leetcode/1191.py",
+          "branch": "python_ide",
+          "file_path": "leetcode/1191.py",
+          "language": "python",
+          "static_path": "branch/python_ide/leetcode/1191.py",
+          "created_at": "2026-09-17 10:07:04",
+          "updated_at": "2026-09-17 10:07:04"
+        },
         {
           "id": 128,
           "file_name": "3186.py",
