@@ -1,9 +1,9 @@
 {
   "meta": {
     "repo": "Penter405/code",
-    "last_updated": "2026-09-17T10:49:12.227069",
+    "last_updated": "2026-09-17T12:16:45.642240",
     "total_folders": 11,
-    "total_files": 41
+    "total_files": 42
   },
   "folders": [
     {
@@ -36,9 +36,24 @@
       "name": "take or skip",
       "parent_id": 20,
       "created_at": "2026-09-14 13:23:41",
-      "updated_at": "2026-09-17T10:49:05.123233",
-      "file_count": 7,
+      "updated_at": "2026-09-17T12:16:38.002664",
+      "file_count": 8,
       "files": [
+        {
+          "id": 128,
+          "file_name": "3186.py",
+          "display_name": null,
+          "commit_time": "2026-09-17 12:15:30 +0800",
+          "commit_name": "DP train , leetcode 3186",
+          "github_url": "https://github.com/Penter405/code/blob/python_ide/leetcode/3186.py",
+          "raw_github_url": "https://raw.githubusercontent.com/Penter405/code/python_ide/leetcode/3186.py",
+          "branch": "python_ide",
+          "file_path": "leetcode/3186.py",
+          "language": "python",
+          "static_path": "branch/python_ide/leetcode/3186.py",
+          "created_at": "2026-09-17 04:16:38",
+          "updated_at": "2026-09-17 04:16:38"
+        },
         {
           "id": 127,
           "file_name": "740.py",
