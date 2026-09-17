@@ -1,11 +1,36 @@
 {
   "meta": {
     "repo": "Penter405/code",
-    "last_updated": "2026-09-17T18:07:08.096794",
-    "total_folders": 11,
-    "total_files": 47
+    "last_updated": "2026-09-17T20:01:35.973091",
+    "total_folders": 12,
+    "total_files": 49
   },
   "folders": [
+    {
+      "id": 23,
+      "name": "take which child",
+      "parent_id": 20,
+      "created_at": "2026-09-17 12:01:30",
+      "updated_at": "2026-09-17T20:01:34.654174",
+      "file_count": 1,
+      "files": [
+        {
+          "id": 135,
+          "file_name": "64-usingDP.py",
+          "display_name": null,
+          "commit_time": "2026-09-17 19:58:10 +0800",
+          "commit_name": "DP train, leetcode 64",
+          "github_url": "https://github.com/Penter405/code/blob/python_ide/leetcode/64-usingDP.py",
+          "raw_github_url": "https://raw.githubusercontent.com/Penter405/code/python_ide/leetcode/64-usingDP.py",
+          "branch": "python_ide",
+          "file_path": "leetcode/64-usingDP.py",
+          "language": "python",
+          "static_path": "branch/python_ide/leetcode/64-usingDP.py",
+          "created_at": "2026-09-17 12:01:34",
+          "updated_at": "2026-09-17 12:01:34"
+        }
+      ]
+    },
     {
       "id": 22,
       "name": "Largest Increasing Sequence",
@@ -690,9 +715,24 @@
       "name": "兩點間最短路徑 dijksta",
       "parent_id": 2,
       "created_at": "2026-09-08 01:17:21",
-      "updated_at": "2026-09-08T14:58:31.342597",
-      "file_count": 3,
+      "updated_at": "2026-09-17T20:01:19.797661",
+      "file_count": 4,
       "files": [
+        {
+          "id": 134,
+          "file_name": "64.py",
+          "display_name": null,
+          "commit_time": "2026-09-17 19:40:46 +0800",
+          "commit_name": "DP(but i used dijksta) train, leetcode 64",
+          "github_url": "https://github.com/Penter405/code/blob/python_ide/leetcode/64.py",
+          "raw_github_url": "https://raw.githubusercontent.com/Penter405/code/python_ide/leetcode/64.py",
+          "branch": "python_ide",
+          "file_path": "leetcode/64.py",
+          "language": "python",
+          "static_path": "branch/python_ide/leetcode/64.py",
+          "created_at": "2026-09-17 12:01:19",
+          "updated_at": "2026-09-17 12:01:19"
+        },
         {
           "id": 92,
           "file_name": "1631.py",
