@@ -1,1 +1,1 @@
-print(dir(set))
+print(help(list.clear))
