@@ -1,6 +1,5 @@
-#did not finish
 class Solution:
-    def maxTotalReward(self, rewardValues: List[int]) -> int:
+    def maxTotalReward(self, rewardValues: list[int]) -> int:
         """
         total reward=0
         marked=[0]*len(rewardValues)
@@ -10,4 +9,6 @@ class Solution:
         }
         pick me =(every smaller than me item sum)
 
+        legal!=best
+        best!=first chose is smallest
         """
