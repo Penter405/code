@@ -1,11 +1,85 @@
 {
   "meta": {
     "repo": "Penter405/code",
-    "last_updated": "2026-09-18T11:18:14.031542",
-    "total_folders": 12,
-    "total_files": 52
+    "last_updated": "2026-09-21T19:47:20.570719",
+    "total_folders": 15,
+    "total_files": 55
   },
   "folders": [
+    {
+      "id": 29,
+      "name": "0/1",
+      "parent_id": 24,
+      "created_at": "2026-09-21 11:47:11",
+      "updated_at": "2026-09-21T19:47:17.394819",
+      "file_count": 2,
+      "files": [
+        {
+          "id": 141,
+          "file_name": "1049.py",
+          "display_name": null,
+          "commit_time": "2026-09-21 19:44:24 +0800",
+          "commit_name": "DP train, bag 1049, 416  ; not fiding best worst:3180",
+          "github_url": "https://github.com/Penter405/code/blob/python_ide/leetcode/1049.py",
+          "raw_github_url": "https://raw.githubusercontent.com/Penter405/code/python_ide/leetcode/1049.py",
+          "branch": "python_ide",
+          "file_path": "leetcode/1049.py",
+          "language": "python",
+          "static_path": "branch/python_ide/leetcode/1049.py",
+          "created_at": "2026-09-21 11:47:17",
+          "updated_at": "2026-09-21 11:47:17"
+        },
+        {
+          "id": 140,
+          "file_name": "416.py",
+          "display_name": null,
+          "commit_time": "2026-09-21 19:44:24 +0800",
+          "commit_name": "DP train, bag 1049, 416  ; not fiding best worst:3180",
+          "github_url": "https://github.com/Penter405/code/blob/python_ide/leetcode/416.py",
+          "raw_github_url": "https://raw.githubusercontent.com/Penter405/code/python_ide/leetcode/416.py",
+          "branch": "python_ide",
+          "file_path": "leetcode/416.py",
+          "language": "python",
+          "static_path": "branch/python_ide/leetcode/416.py",
+          "created_at": "2026-09-21 11:47:15",
+          "updated_at": "2026-09-21 11:47:15"
+        }
+      ]
+    },
+    {
+      "id": 28,
+      "name": "not finding best/worst",
+      "parent_id": 20,
+      "created_at": "2026-09-21 11:46:07",
+      "updated_at": "2026-09-21T19:46:56.031619",
+      "file_count": 1,
+      "files": [
+        {
+          "id": 139,
+          "file_name": "3180.py",
+          "display_name": null,
+          "commit_time": "2026-09-21 19:44:24 +0800",
+          "commit_name": "DP train, bag 1049, 416  ; not fiding best worst:3180",
+          "github_url": "https://github.com/Penter405/code/blob/python_ide/leetcode/3180.py",
+          "raw_github_url": "https://raw.githubusercontent.com/Penter405/code/python_ide/leetcode/3180.py",
+          "branch": "python_ide",
+          "file_path": "leetcode/3180.py",
+          "language": "python",
+          "static_path": "branch/python_ide/leetcode/3180.py",
+          "created_at": "2026-09-21 11:46:56",
+          "updated_at": "2026-09-21 11:46:56"
+        }
+      ]
+    },
+    {
+      "id": 24,
+      "name": "bag",
+      "parent_id": 20,
+      "created_at": "2026-09-21 11:44:53",
+      "updated_at": "2026-09-21 11:44:53",
+      "file_count": 0,
+      "files": []
+    },
     {
       "id": 23,
       "name": "take which child",
