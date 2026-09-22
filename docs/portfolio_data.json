@@ -1,9 +1,9 @@
 {
   "meta": {
     "repo": "Penter405/code",
-    "last_updated": "2026-09-22T14:14:15.350895",
+    "last_updated": "2026-09-22T14:50:30.666032",
     "total_folders": 15,
-    "total_files": 58
+    "total_files": 59
   },
   "folders": [
     {
@@ -11,9 +11,24 @@
       "name": "0/1",
       "parent_id": 24,
       "created_at": "2026-09-21 11:47:11",
-      "updated_at": "2026-09-22T14:14:11.175122",
-      "file_count": 5,
+      "updated_at": "2026-09-22T14:50:22.763743",
+      "file_count": 6,
       "files": [
+        {
+          "id": 145,
+          "file_name": "474.py",
+          "display_name": null,
+          "commit_time": "2026-09-22 14:49:41 +0800",
+          "commit_name": "DP train  bag 0/1 , leetcode 474",
+          "github_url": "https://github.com/Penter405/code/blob/python_ide/leetcode/474.py",
+          "raw_github_url": "https://raw.githubusercontent.com/Penter405/code/python_ide/leetcode/474.py",
+          "branch": "python_ide",
+          "file_path": "leetcode/474.py",
+          "language": "python",
+          "static_path": "branch/python_ide/leetcode/474.py",
+          "created_at": "2026-09-22 06:50:22",
+          "updated_at": "2026-09-22 06:50:22"
+        },
         {
           "id": 144,
           "file_name": "494-DP.py",
