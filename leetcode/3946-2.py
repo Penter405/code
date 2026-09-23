@@ -5,16 +5,18 @@ middle=time.time()
 middle2=time.time()
 middle3=time.time()
 middle4=time.time()
+find_free=time.time()
+find_free2=time.time()
 class Solution:
     def maximumSaleItems(self, items: list[list[int]], budget: int) -> int:
-        global middle,middle2,middle3,middle4
+        global middle,middle2,middle3,middle4,find_free,find_free2
         result=-1
-        dp=defaultdict(list)
-        frees={}
+        dp=defaultdict(int)
+        frees=[None for _ in range(len(items))]
         #tree one build
         def get_free(index:int,big_factor):
             nonlocal frees
-            if index in frees:
+            if frees[index]!=None:
                 return frees[index]
             result=0
             lindex=-1
@@ -28,33 +30,36 @@ class Solution:
             frees[index]=result
             return result
         index=-1
-
-
-
+        find_free=time.time()
+        for rs in range(len(items)):
+            get_free(rs,items[rs][0])
+        find_free2=time.time()
 
         #we can make this without a set to cheak whether repeating
+        #this is not using dp beacue we do have a best solution for saved on dp table
         for guy_f, guy_p in items:
             index+=1
             for costed_money in sorted(list(dp.keys()).copy(),reverse=True):
-                for item_got in dp[costed_money]:
-                    if costed_money+guy_p>budget:
-                        continue
+                if costed_money+guy_p>budget:
+                    continue
 
-                    dp[costed_money+guy_p].append(item_got+1+get_free(index,guy_f))
+                dp[costed_money+guy_p]=max(dp[costed_money+guy_p],dp[costed_money]+1+frees[index])
             if guy_p>budget:
                 continue
-            dp[guy_p].append(1+get_free(index,guy_f))
+            dp[guy_p]=max(dp[guy_p],1+frees[index])
         middle=time.time()
 
 
-        got_free=[]
+        got_free=dp
+        """
         for all_in_this_cost in range(budget+1):
             if all_in_this_cost not in dp:
                 got_free.append(0)
             else:
                 got_free.append(max(dp[all_in_this_cost]))
-        result=max(result,max(got_free+[0]))
-        dp.clear()
+        """
+        result=max(result,max(list(got_free.values())+[0]))
+        #dp.clear()
         middle2=time.time()
         dp2=[0 for _ in range(budget+1)]#for this we only save got, dont save took because no more free
 
@@ -81,19 +86,20 @@ class Solution:
                 we should only get these cost both sum at most to budget and from each dp cost get maximum
                 """
         middle4=time.time()
-
-        for cosing in range(len(got_free)):
+        result=max(result,max(dp2+[0]))
+        for cosing in got_free.keys():
             #print(cosing)
             for legal_dp1_cost in range(0,budget-(cosing)+1):
                 #print(cosing+legal_dp1_cost,cosing,legal_dp1_cost)
-                result=(max(result,got_free[legal_dp1_cost]+dp2[cosing]))
+                result=(max(result,got_free[cosing]+dp2[legal_dp1_cost]))
         return result
 
-items =[[579,35],[635,21],[432,73],[1441,34],[1211,24],[1075,79],[1165,7],[1340,13],[182,57],[838,20],[801,29],[221,57],[1202,77],[821,34],[579,81],[619,6],[982,15],[802,20],[280,6],[242,68],[332,51],[870,8],[497,17],[1041,37],[82,61],[804,46],[874,1],[1403,8],[665,20],[771,61],[1390,4],[1072,9],[1149,32],[1024,25],[1248,25],[1055,67],[748,28],[415,7],[199,81],[1160,83],[1217,36],[760,51],[1046,77],[592,29],[1401,60],[830,81],[1352,1],[879,6],[731,21],[992,78],[1056,18],[1094,81],[86,53],[96,58],[404,10],[1479,29],[663,67],[639,29],[1455,76],[687,15],[359,23],[737,57],[477,53],[645,66],[1415,60],[684,31],[916,35],[647,48],[143,13],[1288,48],[408,70],[109,23],[914,28]]
-budget = 83
+items =[[1073,48],[956,11],[658,38],[829,20],[47,1],[237,21],[1095,15],[1335,4],[533,19],[506,5],[252,9],[803,2],[1451,17],[629,1],[195,39],[1023,18],[654,32],[1242,23],[184,26],[423,19],[958,37],[1416,27],[39,35],[309,33],[557,17],[71,5],[1309,24],[847,6],[1442,36],[483,31],[829,9],[927,26],[51,24],[1076,15],[1296,24],[252,21],[1417,50],[1175,11],[531,21],[68,19],[1438,30],[471,30],[1139,27],[491,48],[1024,29],[1351,9],[387,14],[523,28],[1101,22],[724,31],[1211,43],[772,44],[90,24],[926,38],[239,33],[1065,42],[682,14],[870,41],[825,5],[737,40],[28,6],[1493,8],[94,7],[332,12],[482,44],[298,42],[572,14],[1073,40],[1451,38],[1067,1],[1278,30],[442,40],[118,13],[1025,28],[480,51],[1178,35],[1146,18],[143,36],[86,44],[1187,31],[1213,24],[540,30],[381,34],[580,7],[813,43],[851,35]]
+budget = 52
 print(Solution.maximumSaleItems(None,items,budget))
 end = time.time()
 print("all",f"{end-start:.10f}")
+print("find free", f"{find_free2-find_free:.10f}")
 print("first dp",f"{middle-start:.10f}")
 print("cheak dp table",f"{middle2-middle:.10f}")
 print("init second dp",f"{middle3-middle2:.10f}")
