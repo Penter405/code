@@ -1,11 +1,21 @@
+import time
+from collections import defaultdict
+start = time.time()
+middle=time.time()
+middle2=time.time()
+middle3=time.time()
+middle4=time.time()
 class Solution:
     def maximumSaleItems(self, items: list[list[int]], budget: int) -> int:
+        global middle,middle2,middle3,middle4
         result=-1
-        dp=[list() for _ in range(budget+1)]
-
-        i_can_get_free=dict()
+        dp=defaultdict(list)
+        frees={}
         #tree one build
         def get_free(index:int,big_factor):
+            nonlocal frees
+            if index in frees:
+                return frees[index]
             result=0
             lindex=-1
             for factor,price in items:
@@ -15,32 +25,37 @@ class Solution:
                     continue
                 if factor%big_factor==0:#this row was this-> if big_factor%factor==0:
                     result+=1
+            frees[index]=result
             return result
         index=-1
+
+
+
+
+        #we can make this without a set to cheak whether repeating
         for guy_f, guy_p in items:
             index+=1
-            for costed_money in range(len(dp)):
-                for item_got,members_we_have_took in dp[costed_money]:
+            for costed_money in sorted(list(dp.keys()).copy(),reverse=True):
+                for item_got in dp[costed_money]:
                     if costed_money+guy_p>budget:
                         continue
-                    if index in members_we_have_took:
-                        continue
-                    member2=members_we_have_took.copy()
-                    member2.add(index)
-                    dp[costed_money+guy_p].append((item_got+1+get_free(index,guy_f),member2))
+
+                    dp[costed_money+guy_p].append(item_got+1+get_free(index,guy_f))
             if guy_p>budget:
                 continue
-            dp[guy_p].append((1+get_free(index,guy_f),set([index])))
+            dp[guy_p].append(1+get_free(index,guy_f))
+        middle=time.time()
+
 
         got_free=[]
-        for all_in_this_cost in dp:
-            if len(all_in_this_cost)==0:
+        for all_in_this_cost in range(budget+1):
+            if all_in_this_cost not in dp:
                 got_free.append(0)
             else:
-                got_free.append(max(all_in_this_cost)[0])
+                got_free.append(max(dp[all_in_this_cost]))
         result=max(result,max(got_free+[0]))
-        
-        
+        dp.clear()
+        middle2=time.time()
         dp2=[0 for _ in range(budget+1)]#for this we only save got, dont save took because no more free
 
         for guy_f, guy_p in items:
@@ -49,15 +64,7 @@ class Solution:
         result=max(result,max(dp2+[0]))
 
         #and we need to cheak every in dp2 initialized , because they are noded of tree2
-        for cosing in range(len(got_free)):
-            #print(cosing)
-            for legal_dp1_cost in range(0,budget-(cosing)+1):
-                #print(cosing+legal_dp1_cost,cosing,legal_dp1_cost)
-                result=(max(result,got_free[legal_dp1_cost]+dp2[cosing]))
-
-
-
-
+        middle3=time.time()
         for costed_money in range(len(dp2)):
             if dp2[costed_money]==0:
                 continue
@@ -73,15 +80,31 @@ class Solution:
                 sort dp table?
                 we should only get these cost both sum at most to budget and from each dp cost get maximum
                 """
-                for legal_dp1_cost in range(0,budget-(costed_money+guy_p)+1):
-                    result=(max(result,got_free[legal_dp1_cost]+dp2[costed_money]+1))
-                #if we never run that for loop
-                result=max(result,dp2[costed_money]+1)
+        middle4=time.time()
 
-
-
+        for cosing in range(len(got_free)):
+            #print(cosing)
+            for legal_dp1_cost in range(0,budget-(cosing)+1):
+                #print(cosing+legal_dp1_cost,cosing,legal_dp1_cost)
+                result=(max(result,got_free[legal_dp1_cost]+dp2[cosing]))
         return result
 
-items = [[1421,11],[257,25],[685,57],[1129,51],[121,73],[415,72],[195,57],[908,62],[1451,15],[230,8],[399,66],[523,22],[987,76],[663,38],[18,19],[160,37],[169,48],[742,14],[397,66],[1336,2],[362,26],[1241,36],[43,21],[1322,52],[345,27],[1076,70],[1399,13],[437,54],[943,89],[503,25],[1385,74],[640,32],[1250,47],[1175,79],[1038,34],[41,40],[884,7],[1461,10],[746,75],[406,66],[1202,40],[164,22],[498,51],[703,35],[944,30],[192,57],[983,89],[1234,33],[1072,27],[889,77],[370,80],[835,64],[1030,66],[1275,29],[853,19],[1061,15],[1437,13],[1198,54],[846,71],[806,65],[1246,90],[638,25],[1374,5],[1161,57],[1041,61],[800,74],[816,16],[133,27],[1145,89],[913,62],[176,6],[1017,42],[951,24],[586,8],[1271,40],[891,89],[1061,66],[1466,62],[1398,14],[646,68],[1279,34],[1095,5],[1348,55],[411,22],[183,78],[176,43],[540,43],[1285,36],[1037,9],[502,64],[1365,54],[988,91],[860,6],[1169,89],[1320,9],[719,84],[1393,34],[110,46]]
-budget = 91
+items =[[579,35],[635,21],[432,73],[1441,34],[1211,24],[1075,79],[1165,7],[1340,13],[182,57],[838,20],[801,29],[221,57],[1202,77],[821,34],[579,81],[619,6],[982,15],[802,20],[280,6],[242,68],[332,51],[870,8],[497,17],[1041,37],[82,61],[804,46],[874,1],[1403,8],[665,20],[771,61],[1390,4],[1072,9],[1149,32],[1024,25],[1248,25],[1055,67],[748,28],[415,7],[199,81],[1160,83],[1217,36],[760,51],[1046,77],[592,29],[1401,60],[830,81],[1352,1],[879,6],[731,21],[992,78],[1056,18],[1094,81],[86,53],[96,58],[404,10],[1479,29],[663,67],[639,29],[1455,76],[687,15],[359,23],[737,57],[477,53],[645,66],[1415,60],[684,31],[916,35],[647,48],[143,13],[1288,48],[408,70],[109,23],[914,28]]
+budget = 83
 print(Solution.maximumSaleItems(None,items,budget))
+end = time.time()
+print("all",f"{end-start:.10f}")
+print("first dp",f"{middle-start:.10f}")
+print("cheak dp table",f"{middle2-middle:.10f}")
+print("init second dp",f"{middle3-middle2:.10f}")
+print("second dp",f"{middle4-middle4:.10f}")
+print("get answer by two dp",f"{end-middle4:.10f}")
+"""
+83
+all 0.5909194946
+first dp 0.5759844780
+cheak dp table 0.0142560005
+init second dp 0.0000171661
+second dp 0.0000000000
+get answer by two dp 0.0003368855
+"""
