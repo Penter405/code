@@ -1,3 +1,3 @@
-from collections import defaultdict
-dp=defaultdict(list)
-print(10 in dp)
+from collections import defaultdict,deque
+me=deque()
+print(dir(deque))
