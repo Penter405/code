@@ -1,11 +1,45 @@
 {
   "meta": {
     "repo": "Penter405/code",
-    "last_updated": "2026-09-27T20:12:45.015611",
-    "total_folders": 17,
-    "total_files": 62
+    "last_updated": "2026-09-28T19:31:56.845226",
+    "total_folders": 19,
+    "total_files": 63
   },
   "folders": [
+    {
+      "id": 35,
+      "name": "split for max amount",
+      "parent_id": 20,
+      "created_at": "2026-09-28 11:31:29",
+      "updated_at": "2026-09-28 11:31:29",
+      "file_count": 0,
+      "files": []
+    },
+    {
+      "id": 32,
+      "name": "split",
+      "parent_id": 20,
+      "created_at": "2026-09-28 11:30:39",
+      "updated_at": "2026-09-28T19:31:52.820293",
+      "file_count": 1,
+      "files": [
+        {
+          "id": 149,
+          "file_name": "2369.py",
+          "display_name": null,
+          "commit_time": "2026-09-28 19:29:15 +0800",
+          "commit_name": "DP split , leetcode 2369",
+          "github_url": "https://github.com/Penter405/code/blob/python_ide/leetcode/2369.py",
+          "raw_github_url": "https://raw.githubusercontent.com/Penter405/code/python_ide/leetcode/2369.py",
+          "branch": "python_ide",
+          "file_path": "leetcode/2369.py",
+          "language": "python",
+          "static_path": "branch/python_ide/leetcode/2369.py",
+          "created_at": "2026-09-28 11:31:52",
+          "updated_at": "2026-09-28 11:31:52"
+        }
+      ]
+    },
     {
       "id": 31,
       "name": "logest common subsequence",
