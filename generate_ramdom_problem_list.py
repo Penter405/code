@@ -1,6 +1,8 @@
 import random
 """
-"before_random=[2707,  5-2
+before_random=[
+2787, 3-1
+2707,  5-2
 123,3573,  6-1
 3259,376,  6-2
 3628  6-3
