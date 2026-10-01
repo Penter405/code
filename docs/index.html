@@ -471,6 +471,16 @@
             .file-item > :nth-child(3), .file-item > :nth-child(4) { display: none; }
         }
 
+        #whatsNewContainer .file-column-header, #whatsNewContainer .file-item {
+            grid-template-columns: minmax(200px, 1fr) minmax(200px, 1.5fr) 120px 160px 80px;
+        }
+
+        @media (max-width: 760px) {
+            #whatsNewContainer .file-column-header, #whatsNewContainer .file-item { grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr) 120px; }
+            #whatsNewContainer .file-column-header > :nth-child(4), #whatsNewContainer .file-column-header > :nth-child(5),
+            #whatsNewContainer .file-item > :nth-child(4), #whatsNewContainer .file-item > :nth-child(5) { display: none; }
+        }
+
         .diff-blocks {
             display: flex;
             gap: 2px;
@@ -768,7 +778,8 @@
             </div>
             <div class="file-list" id="whatsNewContainer">
                 <div class="file-column-header">
-                    <span style="color: var(--text-secondary); font-size: 0.82rem; padding: 3px 6px;">File (Chapter)</span>
+                    <span style="color: var(--text-secondary); font-size: 0.82rem; padding: 3px 6px;">File</span>
+                    <span style="color: var(--text-secondary); font-size: 0.82rem; padding: 3px 6px;">Full Path</span>
                     <span style="color: var(--text-secondary); font-size: 0.82rem; padding: 3px 6px;">Branch</span>
                     <span style="color: var(--text-secondary); font-size: 0.82rem; padding: 3px 6px;">Date modified ↓</span>
                     <span style="color: var(--text-secondary); font-size: 0.82rem; padding: 3px 6px;">Type</span>
@@ -883,13 +894,14 @@
             allFiles.sort((a, b) => String(b.commit_time || '').localeCompare(String(a.commit_time || '')));
             
             allFiles.slice(0, 100).forEach(f => {
+                const fullPath = f.file_path || f.static_path || '';
                 list.insertAdjacentHTML('beforeend', `
                     <div class="file-item" style="cursor:pointer;" onclick="viewFileCode(${f.id || 'null'}, '${f.raw_github_url}', '${f.github_url}', '${f.file_name}')">
                         <div class="file-info">
                             <svg class="file-icon" width="16" height="16" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M2 1.75C2 .784 2.784 0 3.75 0h8.5C13.216 0 14 .784 14 1.75v12.5A1.75 1.75 0 0112.25 16h-8.5A1.75 1.75 0 012 14.25V1.75zm1.75-.25a.25.25 0 00-.25.25v12.5c0 .138.112.25.25.25h8.5a.25.25 0 00.25-.25V1.75a.25.25 0 00-.25-.25h-8.5zM4 4h8v1H4V4zm0 3h8v1H4V7zm0 3h4v1H4v-1z"></path></svg>
                             <span class="file-name">${f.file_name}</span>
-                            <span style="font-size: 0.8em; color: var(--accent-primary); margin-left: 8px; border: 1px solid var(--border-default); padding: 2px 6px; border-radius: 4px; cursor: pointer;" onclick="event.stopPropagation(); document.getElementById('whatsnew').classList.remove('active'); openChapter('${f.analysis_id}')">${f.chapter_name || ''}</span>
                         </div>
+                        <span style="font-family: monospace; font-size: 0.85rem; color: var(--accent-primary); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="Go to Chapter" onclick="event.stopPropagation(); document.getElementById('whatsnew').classList.remove('active'); openChapter('${f.analysis_id}')">${fullPath}</span>
                         <span class="stat-added">${f.branch || '—'}</span>
                         <span class="stat-removed">${String(f.commit_time || '').slice(0, 16)}</span>
                         <span class="file-diff-bar">${(f.file_name || '').includes('.') ? f.file_name.split('.').pop().toUpperCase() + ' file' : 'File'}</span>
